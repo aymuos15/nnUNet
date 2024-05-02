@@ -1,6 +1,6 @@
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.robust_ce_loss import Region_CE
+from nnunetv2.training.loss.losses import Region_CE
 import numpy as np
 
 class nnUNetTrainerCELoss(nnUNetTrainer):
