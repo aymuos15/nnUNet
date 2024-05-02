@@ -4,7 +4,7 @@ from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.loss.losses import BlobDice__RegionCE
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
-class nnUNetTrainerblobTversky__TopK_loss(nnUNetTrainer):
+class nnUNetTrainerblobDice_Region_CELoss(nnUNetTrainer):
     def build_loss(self):
         loss = BlobDice__RegionCE({'batch_dice': self.configuration_manager.batch_dice, 'smooth': 1e-5, 'do_bg': False, 'ddp': self.is_ddp}, {},
                                     alpha=2, beta=1,
