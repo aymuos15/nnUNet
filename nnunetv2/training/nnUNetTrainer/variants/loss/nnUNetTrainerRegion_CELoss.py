@@ -3,7 +3,7 @@ from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.training.loss.losses import Region_CE
 import numpy as np
 
-class nnUNetTrainerCELoss(nnUNetTrainer):
+class nnUNetTrainerRegion_CELoss(nnUNetTrainer):
     def _build_loss(self):
         assert not self.label_manager.has_regions, "regions not supported by this trainer"
         loss = Region_CE(
