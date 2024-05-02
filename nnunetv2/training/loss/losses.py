@@ -7,6 +7,9 @@ import numpy as np
 from nnunetv2.utilities.helpers import softmax_helper_dim1
 from nnunetv2.utilities.ddp_allgather import AllGatherGrad
 from nnunetv2.training.loss.blob_helper import compute_loss
+from nnunetv2.training.loss.region_helper import RegionLoss
+# from blob_helper import compute_loss
+# from region_helper import RegionLoss
 
 import cc3d
 
@@ -718,11 +721,84 @@ class blobTversky__TverskyTopK_loss(nn.Module):
 
         return loss
 
-# ###################### Test Losses ######################
+#################
+''' Region CE '''
+#################
+class Region_CE(RegionLoss):
+    def forward(self, inputs: torch.Tensor, labels: torch.Tensor):
+        if len(labels.shape) == len(inputs.shape):
+            assert labels.shape[1] == 1
+            labels = labels[:, 0]
+        labels = labels.long()
+
+        ce = RobustCrossEntropyLoss()
+        loss_ce = ce(inputs, labels)
+
+        gt_proportion, valid_mask = self.get_gt_proportion(self.mode, labels, inputs.shape)
+        pred_proportion = self.get_pred_proportion(self.mode, inputs, temp=self.temp, valid_mask=valid_mask)
+        loss_reg = (pred_proportion - gt_proportion).abs().mean()
+
+        loss = loss_ce + self.alpha * loss_reg
+
+        return loss
+
+############################
+''' Blob_Dice__Region_CE '''
+############################
+class BlobDice__RegionCE(nn.Module):
+    def __init__(self, alpha, beta, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
+                 dice_class=MemoryEfficientSoftDiceLoss):
+
+        super(BlobDice__RegionCE, self).__init__()
+
+        self.alpha = alpha
+        self.beta = beta
+
+        self.ce = Region_CE()
+        self.dice = MemoryEfficientSoftDiceLoss(apply_nonlin=softmax_helper_dim1, batch_dice=False, do_bg=True, smooth=0, ddp=False)
+
+        self.ignore_label = ignore_label
+
+    def forward(self, x, y, loss_mask=None):
+
+        y = y.squeeze(1)
+        multi_label = torch.zeros_like(y)
+        for i in range(x.shape[0]):
+            multi_label = multi_label.detach().cpu().numpy()
+            multi_label[i] = cc3d.connected_components(y[i].detach().cpu().numpy(), connectivity=26)
+            multi_label = torch.tensor(multi_label)
+            
+        multi_label = multi_label.unsqueeze(1)
+        y = y.unsqueeze(1)
+
+        x = x.to(y.device)
+        multi_label = multi_label.to(y.device)
+        
+        loss, _, _ = compute_loss(
+            blob_loss_dict={"main_weight": self.alpha, "blob_weight": self.beta},
+            criterion_dict={"ce": {"name": "ce", "loss": self.ce, "weight": 0.5, "sigmoid": False}},
+            blob_criterion_dict={"dice": {"name": "dice", "loss": self.dice, "weight": 0.5, "sigmoid": False}},
+            raw_network_outputs=x,
+            binary_label=y,
+            multi_label=multi_label,
+        )
+
+        return loss
+
+
+##################### Test Losses ######################
 # pred = torch.zeros((2, 3, 32, 32, 32))
 # pred[0, 0, 10:20, 10:20, 10:20] = 1
 # ref = torch.zeros((2, 32, 32, 32))
 # ref[0, 10:20, 10:20, 10:20] = 1
+
+# region_ce = Region_CE()
+# region_ce_loss = region_ce(pred, ref)
+# print(region_ce_loss)
+
+# blobDice__Region_CE = BlobDice__RegionCE(alpha=2, beta=1, soft_dice_kwargs={}, ce_kwargs={})
+# blobDice__Region_CE_loss = blobDice__Region_CE(pred, ref)
+# print(blobDice__Region_CE_loss)
 
 # dice = MemoryEfficientSoftDiceLoss(apply_nonlin=softmax_helper_dim1, batch_dice=True, do_bg=False, smooth=0, ddp=False)
 # dice_loss = dice(pred, ref)
