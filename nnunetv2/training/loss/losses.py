@@ -809,7 +809,7 @@ class Constrained__DC_and_CE_loss(nn.Module):
 
         count_constraint = get_count_constraint(net_output, target)
 
-        print("Count Constraint: ", count_constraint)
+        # print("Count Constraint: ", count_constraint)
         # print(target.shape)
 
         # target = target.unsqueeze(1)
