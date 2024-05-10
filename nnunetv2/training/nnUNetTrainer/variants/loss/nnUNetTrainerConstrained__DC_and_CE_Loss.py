@@ -1,7 +1,7 @@
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.training.loss.losses import Constrained__DC_and_CE_loss
-from nnunetv2.training.loss.dice_loss import MemoryEfficientSoftDiceLoss
+from nnunetv2.training.loss.losses import MemoryEfficientSoftDiceLoss
 import numpy as np
 
 class nnUNetTrainerConstrained__DC_and_CE_Loss(nnUNetTrainer):
