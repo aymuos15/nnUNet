@@ -6,10 +6,10 @@ import numpy as np
 
 from nnunetv2.utilities.helpers import softmax_helper_dim1
 from nnunetv2.utilities.ddp_allgather import AllGatherGrad
-from nnunetv2.training.loss.blob_helper import compute_loss
-from nnunetv2.training.loss.region_helper import RegionLoss
-# from blob_helper import compute_loss
-# from region_helper import RegionLoss
+# from nnunetv2.training.loss.blob_helper import compute_loss
+# from nnunetv2.training.loss.region_helper import RegionLoss
+from blob_helper import compute_loss
+from region_helper import RegionLoss
 # print("Warnings filtered out")
 
 
@@ -809,6 +809,12 @@ class Constrained__DC_and_CE_loss(nn.Module):
 
         count_constraint = get_count_constraint(net_output, target)
 
+        print("Count Constraint: ", count_constraint)
+        # print(target.shape)
+
+        # target = target.unsqueeze(1)
+        # print(target.shape)
+
         if self.ignore_label is not None:
             assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
                                          '(DC_and_CE_loss)'
@@ -881,14 +887,14 @@ def get_count_constraint(pred, gt):
     return num_gt_lesions - len(tp)
 
 ################### Test Losses ######################
-pred = torch.zeros((2, 3, 32, 32, 32))
-pred[0, 0, 10:20, 10:20, 10:20] = 1
-ref = torch.zeros((2, 32, 32, 32))
-ref[0, 10:20, 10:20, 10:20] = 1
+# pred = torch.zeros((2, 3, 32, 32, 32))
+# pred[0, 0, 10:20, 10:20, 10:20] = 1
+# ref = torch.zeros((2, 32, 32, 32))
+# ref[0, 10:20, 10:20, 10:20] = 1
 
-new_dc_ce = Constrained__DC_and_CE_loss({}, {}, weight_ce=1, weight_dice=1, dice_class=MemoryEfficientSoftDiceLoss)
-new_dc_ce_loss = new_dc_ce(pred, ref)
-print(new_dc_ce_loss)
+# new_dc_ce = Constrained__DC_and_CE_loss({}, {}, weight_ce=1, weight_dice=1, dice_class=MemoryEfficientSoftDiceLoss)
+# new_dc_ce_loss = new_dc_ce(pred, ref)
+# print(new_dc_ce_loss)
 
 # region_ce = Region_CE()
 # region_ce_loss = region_ce(pred, ref)
