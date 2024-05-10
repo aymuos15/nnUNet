@@ -6,10 +6,10 @@ import numpy as np
 
 from nnunetv2.utilities.helpers import softmax_helper_dim1
 from nnunetv2.utilities.ddp_allgather import AllGatherGrad
-# from nnunetv2.training.loss.blob_helper import compute_loss
-# from nnunetv2.training.loss.region_helper import RegionLoss
-from blob_helper import compute_loss
-from region_helper import RegionLoss
+from nnunetv2.training.loss.blob_helper import compute_loss
+from nnunetv2.training.loss.region_helper import RegionLoss
+# from blob_helper import compute_loss
+# from region_helper import RegionLoss
 # print("Warnings filtered out")
 
 
