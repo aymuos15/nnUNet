@@ -10,12 +10,13 @@ from nnunetv2.training.loss.blob_helper import compute_loss
 from nnunetv2.training.loss.region_helper import RegionLoss
 # from blob_helper import compute_loss
 # from region_helper import RegionLoss
+print("Warnings filtered out")
+
 
 import cc3d
 
 import warnings
 warnings.filterwarnings("ignore")
-# print("Warnings filtered out")
 
 ##################################### Base Losses #####################################
 
@@ -849,11 +850,11 @@ def get_count_constraint(pred, gt):
 
     # print("GT: ", gt_label_cc.shape)
 
-    x = x.cpu().numpy()
-    for i in range(x.shape[0]):
-        for j in range(x.shape[1]):
-            x[i][j] = cc3d.connected_components(x[i][j], connectivity=26)
-    pred_label_cc = torch.tensor(x)
+    pred = x.detach().cpu().numpy()
+    for i in range(pred.shape[0]):
+        for j in range(pred.shape[1]):
+            pred[i][j] = cc3d.connected_components(pred[i][j], connectivity=26)
+    pred_label_cc = torch.tensor(pred)
 
     tp = []
 
@@ -987,3 +988,4 @@ print(new_dc_ce_loss)
 # # Print serial number along with each loss
 # data = [(next(counter), name, loss_value) for name, loss_value in losses]
 # df = pd.DataFrame(data, columns=["Serial Number", "Loss Name", "Loss Value"])
+# print(df)
