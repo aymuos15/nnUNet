@@ -10,7 +10,7 @@ from nnunetv2.training.loss.blob_helper import compute_loss
 from nnunetv2.training.loss.region_helper import RegionLoss
 # from blob_helper import compute_loss
 # from region_helper import RegionLoss
-print("Warnings filtered out")
+# print("Warnings filtered out")
 
 
 import cc3d
@@ -850,7 +850,7 @@ def get_count_constraint(pred, gt):
 
     # print("GT: ", gt_label_cc.shape)
 
-    pred = x.detach().cpu().numpy()
+    pred = x.detach().cpu().numpy().astype(np.float32)
     for i in range(pred.shape[0]):
         for j in range(pred.shape[1]):
             pred[i][j] = cc3d.connected_components(pred[i][j], connectivity=26)
