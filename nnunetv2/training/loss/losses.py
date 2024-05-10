@@ -15,6 +15,7 @@ import cc3d
 
 import warnings
 warnings.filterwarnings("ignore")
+# print("Warnings filtered out")
 
 ##################################### Base Losses #####################################
 
@@ -805,6 +806,8 @@ class Constrained__DC_and_CE_loss(nn.Module):
 
     def forward(self, net_output: torch.Tensor, target: torch.Tensor):
 
+        count_constraint = get_count_constraint(net_output, target)
+
         target = target.unsqueeze(1)
 
         if self.ignore_label is not None:
@@ -817,8 +820,6 @@ class Constrained__DC_and_CE_loss(nn.Module):
             target_dice = target
             mask = None
         
-        count_constraint = get_count_constraint(net_output, target)
-
         dc_loss = self.dc(net_output, target_dice, loss_mask=mask) \
             if self.weight_dice != 0 else 0
         ce_loss = self.ce(net_output, target[:, 0]) \
@@ -986,4 +987,3 @@ print(new_dc_ce_loss)
 # # Print serial number along with each loss
 # data = [(next(counter), name, loss_value) for name, loss_value in losses]
 # df = pd.DataFrame(data, columns=["Serial Number", "Loss Name", "Loss Value"])
-# print(df)
