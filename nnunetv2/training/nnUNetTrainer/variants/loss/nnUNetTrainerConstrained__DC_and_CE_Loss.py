@@ -1,13 +1,13 @@
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.losses import Constrained__DC_and_CE_
+from nnunetv2.training.loss.losses import Constrained__DC_and_CE_loss
 from nnunetv2.training.loss.dice_loss import MemoryEfficientSoftDiceLoss
 import numpy as np
 
 class nnUNetTrainerConstrained__DC_and_CE_Loss(nnUNetTrainer):
     def _build_loss(self):
         assert not self.label_manager.has_regions, "regions not supported by this trainer"
-        loss = Constrained__DC_and_CE_({'batch_dice': self.configuration_manager.batch_dice,
+        loss = Constrained__DC_and_CE_loss({'batch_dice': self.configuration_manager.batch_dice,
                         'smooth': 1e-5, 'do_bg': False, 'ddp': self.is_ddp}, {}, weight_ce=1, weight_dice=1,
                         ignore_label=self.label_manager.ignore_label, dice_class=MemoryEfficientSoftDiceLoss)
 
