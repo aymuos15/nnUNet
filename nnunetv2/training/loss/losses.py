@@ -809,8 +809,6 @@ class Constrained__DC_and_CE_loss(nn.Module):
 
         count_constraint = get_count_constraint(net_output, target)
 
-        target = target.unsqueeze(1)
-
         if self.ignore_label is not None:
             assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
                                          '(DC_and_CE_loss)'
