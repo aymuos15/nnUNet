@@ -4,6 +4,9 @@ import torch
 from nnunetv2.utilities.ddp_allgather import AllGatherGrad
 from torch import nn
 
+import cc3d
+import numpy as np
+
 
 class SoftDiceLoss(nn.Module):
     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
@@ -195,6 +198,19 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         tn = tn.sum(dim=axes, keepdim=False)
 
     return tp, fp, fn, tn
+
+def dice(pred, gt):
+    pred = np.asarray(pred).astype(bool)
+    gt = np.asarray(gt).astype(bool)
+
+    intersection = np.logical_and(pred, gt)
+
+    union = pred.sum() + gt.sum()
+
+    if union == 0:
+        return 1.0
+
+    return 2. * intersection.sum() / union
 
 def instance_scores(net_output, gt):
     
