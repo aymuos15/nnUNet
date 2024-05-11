@@ -1079,6 +1079,9 @@ class nnUNetTrainer(object):
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
+        les_sc = les_sc.detach().cpu().numpy()
+        count_sc = count_sc.detach().cpu().numpy()
+        
         if not self.label_manager.has_regions:
             # if we train with regions all segmentation heads predict some kind of foreground. In conventional
             # (softmax training) there needs tobe one output for the background. We are not interested in the
