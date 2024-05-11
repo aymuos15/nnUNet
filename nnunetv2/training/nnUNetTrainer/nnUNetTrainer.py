@@ -1061,6 +1061,7 @@ class nnUNetTrainer(object):
 
         print('This is axes')
         print(axes)
+        print()
 
         tp, fp, fn, _ = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
 
