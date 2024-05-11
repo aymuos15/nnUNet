@@ -1030,7 +1030,9 @@ class nnUNetTrainer(object):
         print()
         print("This is in after deep_supervision - also before one-hot")
         print("Data", target.shape)
+        print(torch.unique(target))
         print("Output", output.shape)
+        print(torch.unique(output))
         print()
 
         # the following is needed for online evaluation. Fake dice (green line)
@@ -1059,10 +1061,12 @@ class nnUNetTrainer(object):
 
         print('This is predicted_segmentation_onehot')
         print(predicted_segmentation_onehot.shape)
+        print(torch.unique(predicted_segmentation_onehot))
         print()
 
         print('This is target')
         print(target.shape)
+        print(torch.unique(target))
         print()
 
         print('This is axes')
