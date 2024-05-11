@@ -254,9 +254,6 @@ def instance_scores(net_output, gt, axes=None, mask=None, square=False):
 
     return lesion_dice, (num_lesions - len(tp))
 
-instance_scores(pred, ref)
-
-
 if __name__ == '__main__':
     from nnunetv2.utilities.helpers import softmax_helper_dim1
     pred = torch.rand((2, 3, 32, 32, 32))
