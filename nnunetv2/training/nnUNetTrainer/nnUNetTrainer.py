@@ -1051,6 +1051,17 @@ class nnUNetTrainer(object):
         else:
             mask = None
 
+        print('This is predicted_segmentation_onehot')
+        print(predicted_segmentation_onehot.shape)
+        print()
+
+        print('This is target')
+        print(target.shape)
+        print()
+
+        print('This is axes')
+        print(axes)
+
         tp, fp, fn, _ = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
 
         tp_hard = tp.detach().cpu().numpy()
