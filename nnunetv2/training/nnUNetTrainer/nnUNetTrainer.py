@@ -974,6 +974,12 @@ class nnUNetTrainer(object):
         with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             # del data
+            print()
+            print("This is in train step")
+            print("Data", target.shape)
+            print("Output", output.shape)
+            print()
+            
             l = self.loss(output, target)
 
         if self.grad_scaler is not None:
@@ -1022,10 +1028,22 @@ class nnUNetTrainer(object):
             del data
             l = self.loss(output, target)
 
+        print()
+        print("This is in validation step")
+        print("Data", target.shape)
+        print("Output", output.shape)
+        print()
+
         # we only need the output with the highest output resolution (if DS enabled)
         if self.enable_deep_supervision:
             output = output[0]
             target = target[0]
+
+        print()
+        print("This is in after deep_supervision - also before one-hot")
+        print("Data", target.shape)
+        print("Output", output.shape)
+        print()
 
         # the following is needed for online evaluation. Fake dice (green line)
         axes = [0] + list(range(2, output.ndim))
