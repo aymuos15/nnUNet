@@ -159,7 +159,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
     print('This is y_onehot')
     print(y_onehot.shape)
-    print(torch.unqiue(y_onehot))
+    print(torch.unique(y_onehot))
     print()
 
     tp = net_output * y_onehot
