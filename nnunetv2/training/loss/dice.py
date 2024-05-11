@@ -196,7 +196,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
     return tp, fp, fn, tn
 
-def instance_scores(net_output, gt, axes=None, mask=None, square=False):
+def instance_scores(net_output, gt):
     
     gt = gt.squeeze(1)
     gt = gt.cpu().numpy()
