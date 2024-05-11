@@ -157,7 +157,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     print()
 
     print('This is y_onehot')
-    print(y_onehout.shape)
+    print(y_onehot.shape)
     print()
 
     tp = net_output * y_onehot
