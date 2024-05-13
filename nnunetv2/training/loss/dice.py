@@ -179,12 +179,12 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
                     
                     ## Isolating Predited Lesions to calulcate Metrics
                     pred_tmp = pred_label_cc.clone()
-                    pred_tmp[~np.isin(pred_tmp,intersecting_cc)] = 0
-                    pred_tmp[np.isin(pred_tmp,intersecting_cc)] = 1
+                    pred_tmp[torch.isin(pred_tmp,intersecting_cc, invert=True)] = 0
+                    pred_tmp[torch.isin(pred_tmp,intersecting_cc)] = 1
 
                     lesion_dice_score = dice(pred_tmp, gt_tmp)
 
-            fp = torch.unique(pred_label_cc[~np.isin(pred_label_cc,tp+[0])])
+            fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc,tp+[0], invert=True)])
             lesion_dice = torch.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
 
     print('Number of GT Lesions        :', num_lesions)
