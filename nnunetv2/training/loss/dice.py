@@ -163,19 +163,21 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
                     lesion_idx += 1
 
                     ## Extracting current lesion
-                    gt_tmp = np.zeros_like(gt_label_cc)
+                    gt_tmp = torch.zeros_like(gt_label_cc)
                     gt_tmp[gt_label_cc == lesion_idx] = 1
                     
                     ## Extracting Predicted true positive lesions
-                    pred_tmp = np.copy(pred_label_cc)
+                    pred_tmp = pred_label_cc.clone()
                     pred_tmp = pred_tmp*gt_tmp
 
-                    intersecting_cc = np.unique(pred_tmp) 
+                    intersecting_cc = torch.unique(pred_tmp) 
                     intersecting_cc = intersecting_cc[intersecting_cc != 0] 
 
                     for cc in intersecting_cc:
                         tp.append(cc)
 
+    print('Number of Lesions      :', num_lesions)
+    print('This is the TP         :', len(tp))
     print('This is the COUNT SCORE:', (num_lesions - len(tp)))
 
     print()
