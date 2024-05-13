@@ -135,17 +135,19 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     :return:
     """
 
-    gt = gt.squeeze(1)
-    gt = gt.cpu().numpy()
-    for batch_idx in range(gt.shape[0]): #0 is batch
-            gt[batch_idx] = cc3d.connected_components(gt[batch_idx], connectivity=26)
+    gt_clone = gt.clone()
+    gt_label = gt_clone.squeeze(1)
+    gt_label = gt_label.cpu().numpy()
+    for batch_idx in range(gt_label.shape[0]): #0 is batch
+            gt_label[batch_idx] = cc3d.connected_components(gt_label[batch_idx], connectivity=26)
     gt_label_cc = torch.tensor(gt)
 
-    net_output = net_output.cpu().numpy()
-    for i in range(net_output.shape[0]):
-        for j in range(net_output.shape[1]):
-            net_output[i][j] = cc3d.connected_components(net_output[i][j], connectivity=26)
-    pred_label_cc = torch.tensor(net_output)
+    pred_clone = net_output.clone()
+    pred_label = pred_clone.cpu().numpy()
+    for i in range(pred_label.shape[0]):
+        for j in range(pred_label.shape[1]):
+            pred_label[i][j] = cc3d.connected_components(pred_label[i][j], connectivity=26)
+    pred_label_cc = torch.tensor(pred_label)
 
     num_lesions = torch.unique(gt_label_cc)
     num_lesions = len(num_lesions[num_lesions != 0])
