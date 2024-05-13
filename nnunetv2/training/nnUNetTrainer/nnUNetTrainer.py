@@ -1,5 +1,3 @@
-print("REGION!!!!!!!!!!!!!!!!!")
-
 import inspect
 import multiprocessing
 import os
@@ -59,7 +57,7 @@ from nnunetv2.training.dataloading.utils import get_case_identifiers, unpack_dat
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scores
+from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.crossval_split import generate_crossval_split
@@ -1027,14 +1025,6 @@ class nnUNetTrainer(object):
             output = output[0]
             target = target[0]
 
-        print()
-        print("This is in after deep_supervision - also before one-hot")
-        print("Data", target.shape)
-        print(torch.unique(target))
-        print("Output", output.shape)
-        print(torch.unique(output))
-        print()
-
         # the following is needed for online evaluation. Fake dice (green line)
         axes = [0] + list(range(2, output.ndim))
 
@@ -1059,29 +1049,11 @@ class nnUNetTrainer(object):
         else:
             mask = None
 
-        print('This is predicted_segmentation_onehot')
-        print(predicted_segmentation_onehot.shape)
-        print(torch.unique(predicted_segmentation_onehot))
-        print()
-
-        print('This is target')
-        print(target.shape)
-        print(torch.unique(target))
-        print()
-
-        print('This is axes')
-        print(axes)
-        print()
-
         tp, fp, fn, _ = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
-        # count_sc = instance_scores(predicted_segmentation_onehot, target)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
-        # les_sc = les_sc.detach().cpu().numpy()
-        # count_sc = count_sc.detach().cpu().numpy()
-        
         if not self.label_manager.has_regions:
             # if we train with regions all segmentation heads predict some kind of foreground. In conventional
             # (softmax training) there needs tobe one output for the background. We are not interested in the
@@ -1091,8 +1063,6 @@ class nnUNetTrainer(object):
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
 
-        # return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'les_sc': les_sc, 'count_sc': count_sc}
-        # return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'count_sc': count_sc}
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard}
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
@@ -1100,7 +1070,6 @@ class nnUNetTrainer(object):
         tp = np.sum(outputs_collated['tp_hard'], 0)
         fp = np.sum(outputs_collated['fp_hard'], 0)
         fn = np.sum(outputs_collated['fn_hard'], 0)
-        count = np.sum(outputs_collated['count_sc'], 0)
 
         if self.is_ddp:
             world_size = dist.get_world_size()
@@ -1128,7 +1097,6 @@ class nnUNetTrainer(object):
         self.logger.log('mean_fg_dice', mean_fg_dice, self.current_epoch)
         self.logger.log('dice_per_class_or_region', global_dc_per_class, self.current_epoch)
         self.logger.log('val_losses', loss_here, self.current_epoch)
-        # self.logger.log('lesion_count', count, self.current_epoch)
 
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
