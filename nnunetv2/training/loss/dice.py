@@ -141,6 +141,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     for batch_idx in range(gt_label.shape[0]): #0 is batch
             gt_label[batch_idx] = cc3d.connected_components(gt_label[batch_idx], connectivity=26)
     gt_label_cc = torch.tensor(gt)
+    gt_label_cc = gt_label_cc.to(net_output.device)
 
     pred_clone = net_output.clone()
     pred_label = pred_clone.cpu().numpy()
@@ -148,6 +149,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         for j in range(pred_label.shape[1]):
             pred_label[i][j] = cc3d.connected_components(pred_label[i][j], connectivity=26)
     pred_label_cc = torch.tensor(pred_label)
+    pred_label_cc = pred_label_cc.to(net_output.device)
 
     num_lesions = torch.unique(gt_label_cc)
     num_lesions = len(num_lesions[num_lesions != 0])
@@ -168,6 +170,9 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
                     
                     ## Extracting Predicted true positive lesions
                     pred_tmp = pred_label_cc.clone()
+                    #print the device of pred_tmp and gt_tmp
+                    print(pred_tmp.device)
+                    print(gt_tmp.device)
                     pred_tmp = pred_tmp*gt_tmp
 
                     intersecting_cc = torch.unique(pred_tmp) 
