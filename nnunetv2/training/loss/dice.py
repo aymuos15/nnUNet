@@ -184,7 +184,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
                     lesion_dice_score = dice(pred_tmp, gt_tmp)
 
-            fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc,tp+[0], invert=True)])
+            fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, torch.tensor(tp) + [0], invert=True)])
             lesion_dice = torch.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
 
     print('Number of GT Lesions        :', num_lesions)
