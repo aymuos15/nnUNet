@@ -121,7 +121,6 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
         dc = dc.mean()
         return -dc
 
-
 def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     """
     net_output must be (b, c, x, y(, z)))
@@ -140,7 +139,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     gt_label = gt_label.cpu().numpy()
     for batch_idx in range(gt_label.shape[0]): #0 is batch
             gt_label[batch_idx] = cc3d.connected_components(gt_label[batch_idx], connectivity=26)
-    gt_label_cc = torch.tensor(gt)
+    gt_label_cc = torch.tensor(gt_label)
     gt_label_cc = gt_label_cc.to(net_output.device)
 
     pred_clone = net_output.clone()
@@ -159,7 +158,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
             for volume_idx in range(gt_label_cc.shape[2]):
 
                 tp = []
-                # lesion_dice_scores = []
+                lesion_dice_scores = []
 
                 for lesion_idx in range(num_lesions):
                     lesion_idx += 1
@@ -170,9 +169,6 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
                     
                     ## Extracting Predicted true positive lesions
                     pred_tmp = pred_label_cc.clone()
-                    #print the device of pred_tmp and gt_tmp
-                    print(pred_tmp.device)
-                    print(gt_tmp.device)
                     pred_tmp = pred_tmp*gt_tmp
 
                     intersecting_cc = torch.unique(pred_tmp) 
@@ -180,20 +176,36 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
                     for cc in intersecting_cc:
                         tp.append(cc)
+                    
+                    ## Isolating Predited Lesions to calulcate Metrics
+                    pred_tmp = pred_label_cc.clone()
+                    pred_tmp[~np.isin(pred_tmp,intersecting_cc)] = 0
+                    pred_tmp[np.isin(pred_tmp,intersecting_cc)] = 1
 
-    print('Number of Lesions      :', num_lesions)
+                    lesion_dice_score = dice(pred_tmp, gt_tmp)
+
+            fp = torch.unique(pred_label_cc[~np.isin(pred_label_cc,tp+[0])])
+            lesion_dice = torch.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
+
+    print('Number of GT Lesions        :', num_lesions)
+    print('Number of Predicted Lesions:',  len(torch.unique(pred_label_cc)))
+    print()
     print('This is the TP         :', len(tp))
+    print('This is the FP         :', len(fp))
     print('This is the COUNT SCORE:', (num_lesions - len(tp)))
+    print()
+    print('This is the Lesion Dice:', lesion_dice)
+    print('This is Dice           :', dice(pred_label_cc, gt_label_cc))
 
-    print()
-    print('This is within the function')
-    print()
+    # print()
+    # print('This is within the function')
+    # print()
     
     if axes is None:
         axes = tuple(range(2, net_output.ndim))
-        print('This is axes')
-        print(axes)
-        print()
+        # print('This is axes')
+        # print(axes)
+        # print()
 
     with torch.no_grad():
         if net_output.ndim != gt.ndim:
@@ -206,15 +218,15 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
             y_onehot.scatter_(1, gt.long(), 1)
 
-    print('This is net_output')
-    print(net_output.shape)
-    print(torch.unique(net_output))
-    print()
+    # print('This is net_output')
+    # print(net_output.shape)
+    # print(torch.unique(net_output))
+    # print()
 
-    print('This is y_onehot')
-    print(y_onehot.shape)
-    print(torch.unique(y_onehot))
-    print()
+    # print('This is y_onehot')
+    # print(y_onehot.shape)
+    # print(torch.unique(y_onehot))
+    # print()
 
     tp = net_output * y_onehot
     fp = net_output * (1 - y_onehot)
@@ -251,78 +263,21 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     return tp, fp, fn, tn
 
 def dice(pred, gt):
-    pred = np.asarray(pred).astype(bool)
-    gt = np.asarray(gt).astype(bool)
+    # Convert inputs to PyTorch tensors
+    pred = torch.as_tensor(pred, dtype=torch.bool)
+    gt = torch.as_tensor(gt, dtype=torch.bool)
 
-    intersection = np.logical_and(pred, gt)
+    # Calculate intersection
+    intersection = torch.logical_and(pred, gt)
 
+    # Calculate union
     union = pred.sum() + gt.sum()
 
     if union == 0:
         return 1.0
 
-    return 2. * intersection.sum() / union
-
-def instance_scores(net_output, gt):
-
-    #! No need to one hot the GT?
-    
-    gt = gt.squeeze(1)
-    gt = gt.cpu().numpy()
-    for batch_idx in range(gt.shape[0]): #0 is batch
-            gt[batch_idx] = cc3d.connected_components(gt[batch_idx], connectivity=26)
-    gt_label_cc = torch.tensor(gt)
-
-    net_output = net_output.cpu().numpy()
-    for i in range(net_output.shape[0]):
-        for j in range(net_output.shape[1]):
-            net_output[i][j] = cc3d.connected_components(net_output[i][j], connectivity=26)
-    pred_label_cc = torch.tensor(net_output)
-
-    num_lesions = torch.unique(gt_label_cc)
-    num_lesions = len(num_lesions[num_lesions != 0])
-
-    for batch_idx in range(gt_label_cc.shape[0]):
-        for channel_idx in range(gt_label_cc.shape[1]):
-            for volume_idx in range(gt_label_cc.shape[2]):
-
-                tp = []
-                # lesion_dice_scores = []
-
-                for lesion_idx in range(num_lesions):
-                    lesion_idx += 1
-
-                    ## Extracting current lesion
-                    gt_tmp = np.zeros_like(gt_label_cc)
-                    gt_tmp[gt_label_cc == lesion_idx] = 1
-                    
-                    ## Extracting Predicted true positive lesions
-                    pred_tmp = np.copy(pred_label_cc)
-                    pred_tmp = pred_tmp*gt_tmp
-
-                    intersecting_cc = np.unique(pred_tmp) 
-                    intersecting_cc = intersecting_cc[intersecting_cc != 0] 
-
-                    for cc in intersecting_cc:
-                        tp.append(cc)
-
-                #     ## Isolating Predited Lesions to calulcate Metrics
-                #     pred_tmp = np.copy(pred_label_cc)
-                #     pred_tmp[np.isin(pred_tmp,intersecting_cc,invert=True)] = 0
-                #     pred_tmp[np.isin(pred_tmp,intersecting_cc)] = 1
-
-                #     dice_score = dice(pred_tmp, gt_tmp)
-                #     # pprint(f'Lesion {lesion_idx} in Volume {volume_idx}, channel {channel_idx}, batch {batch_idx}: Dice = {dice_score}')
-                #     lesion_dice_scores.append(dice_score)
-
-                # fp = np.unique(pred_label_cc[np.isin(pred_label_cc,tp+[0],invert=True)])
-                # lesion_dice = np.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
-
-    print('This is the COUNT SCORE:', (num_lesions - len(tp)))
-    # print('This is Lesion Dice:', lesion_dice)
-
-    # return lesion_dice, (num_lesions - len(tp))
-    return (num_lesions - len(tp))
+    # Calculate Dice coefficient
+    return 2. * intersection.sum().item() / union.item()
 
 if __name__ == '__main__':
     from nnunetv2.utilities.helpers import softmax_helper_dim1
