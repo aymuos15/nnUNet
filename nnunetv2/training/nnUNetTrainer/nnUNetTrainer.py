@@ -1074,12 +1074,12 @@ class nnUNetTrainer(object):
         print()
 
         tp, fp, fn, _ = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
-        les_sc, count_sc = instance_scores(predicted_segmentation_onehot, target)
+        count_sc = instance_scores(predicted_segmentation_onehot, target)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
-        les_sc = les_sc.detach().cpu().numpy()
+        # les_sc = les_sc.detach().cpu().numpy()
         count_sc = count_sc.detach().cpu().numpy()
         
         if not self.label_manager.has_regions:
@@ -1091,7 +1091,8 @@ class nnUNetTrainer(object):
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
 
-        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'les_sc': les_sc, 'count_sc': count_sc}
+        # return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'les_sc': les_sc, 'count_sc': count_sc}
+        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'count_sc': count_sc}
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
         outputs_collated = collate_outputs(val_outputs)
