@@ -183,8 +183,12 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
                     pred_tmp[torch.isin(pred_tmp,intersecting_cc)] = 1
 
                     lesion_dice_score = dice(pred_tmp, gt_tmp)
+            
+            tp = torch.tensor(tp).to(net_output.device)
+            lesion_dice_scores.append(lesion_dice_score)
+            lesion_dice_scores = torch.tensor(lesion_dice_scores).to(net_output.device)
 
-            fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, torch.tensor(tp) + torch.tensor([0]), invert=True)])
+            fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, tp + torch.tensor([0]).to(net_output.device), invert=True)])
             lesion_dice = torch.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
 
     print('Number of GT Lesions        :', num_lesions)
@@ -195,7 +199,6 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     print('This is the COUNT SCORE:', (num_lesions - len(tp)))
     print()
     print('This is the Lesion Dice:', lesion_dice)
-    print('This is Dice           :', dice(pred_label_cc, gt_label_cc))
 
     # print()
     # print('This is within the function')
