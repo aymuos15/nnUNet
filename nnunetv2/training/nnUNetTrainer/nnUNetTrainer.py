@@ -1049,11 +1049,14 @@ class nnUNetTrainer(object):
         else:
             mask = None
 
-        tp, fp, fn, _ = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
+        tp, fp, fn, _, l_dice, cnt = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
+        l_dice = l_dice.detach().cpu().numpy()
+        cnt = cnt.detach().cpu().numpy()
+
         if not self.label_manager.has_regions:
             # if we train with regions all segmentation heads predict some kind of foreground. In conventional
             # (softmax training) there needs tobe one output for the background. We are not interested in the
@@ -1062,14 +1065,18 @@ class nnUNetTrainer(object):
             tp_hard = tp_hard[1:]
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
+            l_dice = l_dice[1:]
+            cnt = cnt[1:]
 
-        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard}
+        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'cnt': cnt, 'dice': l_dice}
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
         outputs_collated = collate_outputs(val_outputs)
         tp = np.sum(outputs_collated['tp_hard'], 0)
         fp = np.sum(outputs_collated['fp_hard'], 0)
         fn = np.sum(outputs_collated['fn_hard'], 0)
+        cnt = np.sum(outputs_collated['cnt'], 0)
+        l_dice = np.sum(outputs_collated['dice'], 0)
 
         if self.is_ddp:
             world_size = dist.get_world_size()
@@ -1089,6 +1096,14 @@ class nnUNetTrainer(object):
             losses_val = [None for _ in range(world_size)]
             dist.all_gather_object(losses_val, outputs_collated['loss'])
             loss_here = np.vstack(losses_val).mean()
+
+            cnts = [None for _ in range(world_size)]
+            dist.all_gather_object(cnts, cnt)
+            cnt = np.vstack([i[None] for i in cnts]).sum(0)
+
+            dice_s = [None for _ in range(world_size)]
+            dist.all_gather_object(dice_s, l_dice)
+            l_dice = np.vstack(dice_s).sum(0)
         else:
             loss_here = np.mean(outputs_collated['loss'])
 
@@ -1097,6 +1112,8 @@ class nnUNetTrainer(object):
         self.logger.log('mean_fg_dice', mean_fg_dice, self.current_epoch)
         self.logger.log('dice_per_class_or_region', global_dc_per_class, self.current_epoch)
         self.logger.log('val_losses', loss_here, self.current_epoch)
+        self.logger.log('counts', cnt, self.current_epoch)
+        self.logger.log('l_dice', l_dice, self.current_epoch)
 
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
