@@ -1051,11 +1051,23 @@ class nnUNetTrainer(object):
 
         tp, fp, fn, _, l_dice, cnt = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
 
+        print('This is tp')
+        print(tp)
+        print(tp.shape)
+        print()
+        print('This is l_dice')
+        print(l_dice)
+        print(l_dice.shape)
+        print()
+        print('This is cnt')
+        print(cnt)
+        print(cnt.shape)
+
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
         l_dice = l_dice.detach().cpu().numpy()
-        cnt = cnt.detach().cpu().numpy()
+        # cnt = cnt.detach().cpu().numpy()
 
         if not self.label_manager.has_regions:
             # if we train with regions all segmentation heads predict some kind of foreground. In conventional
@@ -1065,17 +1077,29 @@ class nnUNetTrainer(object):
             tp_hard = tp_hard[1:]
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
-            l_dice = l_dice[1:]
-            cnt = cnt[1:]
+            # l_dice = l_dice[1:]
+            # cnt = cnt[1:]
 
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'cnt': cnt, 'dice': l_dice}
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
+        print()
+        print('This is val_outputs')
+        print(val_outputs)
+        print()
         outputs_collated = collate_outputs(val_outputs)
         tp = np.sum(outputs_collated['tp_hard'], 0)
+        print()
+        print('This is tp')
+        print(tp)
+        print()
         fp = np.sum(outputs_collated['fp_hard'], 0)
         fn = np.sum(outputs_collated['fn_hard'], 0)
         cnt = np.sum(outputs_collated['cnt'], 0)
+        print()
+        print('This is cnt')
+        print(cnt)
+        print()
         l_dice = np.sum(outputs_collated['dice'], 0)
 
         if self.is_ddp:
