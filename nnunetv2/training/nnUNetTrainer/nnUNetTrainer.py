@@ -1061,7 +1061,7 @@ class nnUNetTrainer(object):
         print()
         print('This is cnt')
         print(cnt)
-        print(cnt.shape)
+        # print(cnt.shape)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
