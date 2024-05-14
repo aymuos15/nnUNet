@@ -191,14 +191,14 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
             fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, tp + torch.tensor([0]).to(net_output.device), invert=True)])
             lesion_dice = torch.sum(lesion_dice_scores)/(len(lesion_dice_scores) + len(fp))
 
-    print('Number of GT Lesions        :', num_lesions)
-    print('Number of Predicted Lesions:',  len(torch.unique(pred_label_cc)))
-    print()
-    print('This is the TP         :', len(tp))
-    print('This is the FP         :', len(fp))
-    print('This is the COUNT SCORE:', (num_lesions - len(tp)))
-    print()
-    print('This is the Lesion Dice:', lesion_dice)
+    # print('Number of GT Lesions        :', num_lesions)
+    # print('Number of Predicted Lesions:',  len(torch.unique(pred_label_cc)))
+    # print()
+    # print('This is the TP         :', len(tp))
+    # print('This is the FP         :', len(fp))
+    # print('This is the COUNT SCORE:', (num_lesions - len(tp)))
+    # print()
+    # print('This is the Lesion Dice:', lesion_dice)
 
     # print()
     # print('This is within the function')
@@ -263,7 +263,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         fn = fn.sum(dim=axes, keepdim=False)
         tn = tn.sum(dim=axes, keepdim=False)
 
-    return tp, fp, fn, tn
+    return tp, fp, fn, tn, lesion_dice, (num_lesions - len(tp))
 
 def dice(pred, gt):
     # Convert inputs to PyTorch tensors
