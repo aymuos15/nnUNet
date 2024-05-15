@@ -1049,7 +1049,7 @@ class nnUNetTrainer(object):
         else:
             mask = None
 
-        tp, fp, fn, _, l_dice, cnt = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
+        tp, fp, fn, _, cnt, l_dice = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
