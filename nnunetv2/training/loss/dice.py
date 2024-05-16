@@ -5,8 +5,6 @@ from nnunetv2.utilities.ddp_allgather import AllGatherGrad
 from torch import nn
 
 import cc3d
-import numpy as np
-
 
 class SoftDiceLoss(nn.Module):
     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
@@ -121,6 +119,23 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
         dc = dc.mean()
         return -dc
 
+def dice(pred, gt):
+    # Convert inputs to PyTorch tensors
+    pred = torch.as_tensor(pred, dtype=torch.bool)
+    gt = torch.as_tensor(gt, dtype=torch.bool)
+
+    # Calculate intersection
+    intersection = torch.logical_and(pred, gt)
+
+    # Calculate union
+    union = pred.sum() + gt.sum()
+
+    if union == 0:
+        return 1.0
+
+    # Calculate Dice coefficient
+    return 2. * intersection.sum().item() / union.item()
+
 def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     """
     net_output must be (b, c, x, y(, z)))
@@ -194,24 +209,8 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     cnt_tensor = torch.tensor([num_lesions - len(tp), 0]).to(net_output.device)
     lesion_dice_tensor = torch.tensor([lesion_dice, 0]).to(net_output.device)
 
-    # print('Number of GT Lesions        :', num_lesions)
-    # print('Number of Predicted Lesions:',  len(torch.unique(pred_label_cc)))
-    # print()
-    # print('This is the TP         :', len(tp))
-    # print('This is the FP         :', len(fp))
-    # print('This is the COUNT SCORE:', (num_lesions - len(tp)))
-    # print()
-    # print('This is the Lesion Dice:', lesion_dice)
-
-    # print()
-    # print('This is within the function')
-    # print()
-    
     if axes is None:
         axes = tuple(range(2, net_output.ndim))
-        # print('This is axes')
-        # print(axes)
-        # print()
 
     with torch.no_grad():
         if net_output.ndim != gt.ndim:
@@ -223,16 +222,6 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         else:
             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
             y_onehot.scatter_(1, gt.long(), 1)
-
-    # print('This is net_output')
-    # print(net_output.shape)
-    # print(torch.unique(net_output))
-    # print()
-
-    # print('This is y_onehot')
-    # print(y_onehot.shape)
-    # print(torch.unique(y_onehot))
-    # print()
 
     tp = net_output * y_onehot
     fp = net_output * (1 - y_onehot)
@@ -267,23 +256,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         tn = tn.sum(dim=axes, keepdim=False)
 
     return tp, fp, fn, tn, cnt_tensor, lesion_dice_tensor
-    
-def dice(pred, gt):
-    # Convert inputs to PyTorch tensors
-    pred = torch.as_tensor(pred, dtype=torch.bool)
-    gt = torch.as_tensor(gt, dtype=torch.bool)
 
-    # Calculate intersection
-    intersection = torch.logical_and(pred, gt)
-
-    # Calculate union
-    union = pred.sum() + gt.sum()
-
-    if union == 0:
-        return 1.0
-
-    # Calculate Dice coefficient
-    return 2. * intersection.sum().item() / union.item()
 
 if __name__ == '__main__':
     from nnunetv2.utilities.helpers import softmax_helper_dim1
