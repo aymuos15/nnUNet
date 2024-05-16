@@ -68,6 +68,7 @@ from nnunetv2.utilities.helpers import empty_cache, dummy_context
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
+print("Latest")
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
@@ -1054,9 +1055,6 @@ class nnUNetTrainer(object):
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
         fn_hard = fn.detach().cpu().numpy()
-        l_dice = l_dice.detach().cpu().numpy()
-        cnt = cnt.detach().cpu().numpy()
-
         if not self.label_manager.has_regions:
             # if we train with regions all segmentation heads predict some kind of foreground. In conventional
             # (softmax training) there needs tobe one output for the background. We are not interested in the
@@ -1065,18 +1063,19 @@ class nnUNetTrainer(object):
             tp_hard = tp_hard[1:]
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
-            l_dice = l_dice[1:]
-            cnt = cnt[1:]
+        
+        # print('Before return')
+        # print(l)
+        # print(l.detach().cpu().numpy())
 
-        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 'cnt': cnt, 'dice': l_dice}
+        return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 
+                'cnt': cnt.detach().cpu().numpy(), 'dice_lesion': l_dice.detach().cpu().numpy()}
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
         outputs_collated = collate_outputs(val_outputs)
         tp = np.sum(outputs_collated['tp_hard'], 0)
         fp = np.sum(outputs_collated['fp_hard'], 0)
         fn = np.sum(outputs_collated['fn_hard'], 0)
-        cnt = np.sum(outputs_collated['cnt'], 0)
-        l_dice = np.sum(outputs_collated['dice'], 0)
 
         if self.is_ddp:
             world_size = dist.get_world_size()
@@ -1097,23 +1096,25 @@ class nnUNetTrainer(object):
             dist.all_gather_object(losses_val, outputs_collated['loss'])
             loss_here = np.vstack(losses_val).mean()
 
-            cnts = [None for _ in range(world_size)]
-            dist.all_gather_object(cnts, cnt)
-            cnt = np.vstack([i[None] for i in cnts]).sum(0)
+            cnt = [None for _ in range(world_size)]
+            dist.all_gather_object(cnt, outputs_collated['cnt'])
+            cnt_here = np.vstack(cnt).mean()
 
-            dice_s = [None for _ in range(world_size)]
-            dist.all_gather_object(dice_s, l_dice)
-            l_dice = np.vstack(dice_s).sum(0)
+            dice_lesion = [None for _ in range(world_size)]
+            dist.all_gather_object(dice_lesion, outputs_collated['dice_lesion'])
+            dice_lesion_here = np.vstack(dice_lesion).mean()
         else:
             loss_here = np.mean(outputs_collated['loss'])
+            cnt_here = np.mean(outputs_collated['cnt'])
+            dice_lesion_here = np.mean(outputs_collated['dice_lesion'])
 
         global_dc_per_class = [i for i in [2 * i / (2 * i + j + k) for i, j, k in zip(tp, fp, fn)]]
         mean_fg_dice = np.nanmean(global_dc_per_class)
         self.logger.log('mean_fg_dice', mean_fg_dice, self.current_epoch)
         self.logger.log('dice_per_class_or_region', global_dc_per_class, self.current_epoch)
         self.logger.log('val_losses', loss_here, self.current_epoch)
-        self.logger.log('lesion_loss', l_dice, self.current_epoch)
-        self.logger.log('Counts', cnt, self.current_epoch)
+        self.logger.log('counts', cnt_here, self.current_epoch)
+        self.logger.log('lesion_dice', dice_lesion_here, self.current_epoch)
 
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
@@ -1125,6 +1126,8 @@ class nnUNetTrainer(object):
         self.print_to_log_file('val_loss', np.round(self.logger.my_fantastic_logging['val_losses'][-1], decimals=4))
         self.print_to_log_file('Pseudo dice', [np.round(i, decimals=4) for i in
                                                self.logger.my_fantastic_logging['dice_per_class_or_region'][-1]])
+        self.print_to_log_file('Lesion Dice', np.round(self.logger.my_fantastic_logging['lesion_dice'][-1], decimals=4))
+        self.print_to_log_file('Count', self.logger.my_fantastic_logging['counts'][-1])
         self.print_to_log_file(
             f"Epoch time: {np.round(self.logger.my_fantastic_logging['epoch_end_timestamps'][-1] - self.logger.my_fantastic_logging['epoch_start_timestamps'][-1], decimals=2)} s")
 
