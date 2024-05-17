@@ -1,12 +1,12 @@
 import numpy as np
 
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.losses import blobTversky__TopK_loss
+from nnunetv2.training.loss.losses import blobTversky__TopK
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
-class nnUNetTrainerblobTversky__TopK_loss(nnUNetTrainer):
+class nnUNetTrainerblobTversky__TopKLoss(nnUNetTrainer):
     def build_loss(self):
-        loss = blobTversky__TopK_loss({'batch_dice': self.configuration_manager.batch_dice, 'smooth': 1e-5, 'do_bg': False, 'ddp': self.is_ddp},
+        loss = blobTversky__TopK({'batch_dice': self.configuration_manager.batch_dice, 'smooth': 1e-5, 'do_bg': False, 'ddp': self.is_ddp},
                                     {}, weight_ce=1, weight_dice=1,
                                     alpha=0.1, beta=0.9,
                                     ignore_label=self.label_manager.ignore_label)
