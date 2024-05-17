@@ -602,11 +602,11 @@ class Tversky_and_TopK_loss(nn.Module):
 ##########################
 ''' Blob_Tversky__TopK '''
 ##########################
-class blobTversky__TopK_loss(nn.Module):
+class blobTversky__TopK(nn.Module):
     def __init__(self, alpha, beta, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
                 dice_class=MemoryEfficientTverskyLoss): # NOTICE TVERSKY LOSS !!!!
 
-        super(blobTversky__TopK_loss, self).__init__()
+        super(blobTversky__TopK, self).__init__()
 
         self.alpha = alpha
         self.beta = beta
