@@ -8,7 +8,6 @@ from copy import deepcopy
 from datetime import datetime
 from time import time, sleep
 from typing import Tuple, Union, List
-import pretty_errors
 
 import numpy as np
 import torch
