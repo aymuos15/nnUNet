@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime
 from time import time, sleep
 from typing import Tuple, Union, List
+import pretty_errors
 
 import numpy as np
 import torch
@@ -57,7 +58,7 @@ from nnunetv2.training.dataloading.utils import get_case_identifiers, unpack_dat
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss
+from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scores
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.crossval_split import generate_crossval_split
@@ -67,8 +68,6 @@ from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
 from nnunetv2.utilities.helpers import empty_cache, dummy_context
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
-
-print("Latest")
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
@@ -195,13 +194,13 @@ class nnUNetTrainer(object):
 
         self.was_initialized = False
 
-        self.print_to_log_file("\n#######################################################################\n"
-                               "Please cite the following paper when using nnU-Net:\n"
-                               "Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). "
-                               "nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. "
-                               "Nature methods, 18(2), 203-211.\n"
-                               "#######################################################################\n",
-                               also_print_to_console=True, add_timestamp=False)
+        # self.print_to_log_file("\n#######################################################################\n"
+        #                        "Please cite the following paper when using nnU-Net:\n"
+        #                        "Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). "
+        #                        "nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. "
+        #                        "Nature methods, 18(2), 203-211.\n"
+        #                        "#######################################################################\n",
+        #                        also_print_to_console=True, add_timestamp=False)
 
     def initialize(self):
         if not self.was_initialized:
@@ -477,10 +476,11 @@ class nnUNetTrainer(object):
         if self.local_rank == 0:
             dct = deepcopy(self.plans_manager.plans)
             del dct['configurations']
-            self.print_to_log_file(f"\nThis is the configuration used by this "
-                                   f"training:\nConfiguration name: {self.configuration_name}\n",
-                                   self.configuration_manager, '\n', add_timestamp=False)
-            self.print_to_log_file('These are the global plan.json settings:\n', dct, '\n', add_timestamp=False)
+            # self.print_to_log_file(f"\nThis is the configuration used by this "
+            #                        f"training:\nConfiguration name: {self.configuration_name}\n",
+            #                        self.configuration_manager, '\n', add_timestamp=False)
+            # self.print_to_log_file('These are the global plan.json settings:\n', dct, '\n', add_timestamp=False)
+            print()
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
@@ -1050,7 +1050,8 @@ class nnUNetTrainer(object):
         else:
             mask = None
 
-        tp, fp, fn, _, cnt, l_dice = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
+        tp, fp, fn, _, = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
+        l_dice, cnt = instance_scores(predicted_segmentation_onehot, target)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
@@ -1356,7 +1357,7 @@ class nnUNetTrainer(object):
 
     def run_training(self):
         self.on_train_start()
-
+        
         for epoch in range(self.current_epoch, self.num_epochs):
             self.on_epoch_start()
 
@@ -1366,12 +1367,20 @@ class nnUNetTrainer(object):
                 train_outputs.append(self.train_step(next(self.dataloader_train)))
             self.on_train_epoch_end(train_outputs)
 
+
             with torch.no_grad():
+
+                validation_start_time = time()
+                
                 self.on_validation_epoch_start()
                 val_outputs = []
                 for batch_id in range(self.num_val_iterations_per_epoch):
                     val_outputs.append(self.validation_step(next(self.dataloader_val)))
                 self.on_validation_epoch_end(val_outputs)
+
+                validation_end_time = time()
+                print('Time taken for validation:', validation_end_time - validation_start_time, 'seconds')
+                print()
 
             self.on_epoch_end()
 
