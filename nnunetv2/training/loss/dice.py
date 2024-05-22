@@ -150,19 +150,28 @@ def instance_scores(net_output, gt):
     pred_label = pred_clone.cpu().numpy()
     for i in range(pred_label.shape[0]):
         for j in range(pred_label.shape[1]):
-            pred_label[i][j] = cc3d.connected_components(pred_label[i][j], connectivity=26)
+            # pred_label[i][j] = cc3d.connected_components(pred_label[i][j], connectivity=26)
+            components = cc3d.connected_components(pred_label[i][j], connectivity=26)
+            pred_label[i][j] = components
+            print('No of lesions (pred):', torch.unique(torch.tensor(pred_label[i][j])))
     pred_label_cc = torch.tensor(pred_label)
     pred_label_cc = pred_label_cc.to(net_output.device)
+    print('Total number of lesions (pred):', torch.unique(pred_label_cc))
 
     gt_clone = gt.clone()
     gt_label = gt_clone.cpu().numpy()
     for i in range(gt_label.shape[0]):
         for j in range(gt_label.shape[1]):
-            gt_label[i][j] = cc3d.connected_components(gt_label[i][j], connectivity=26)
+            # gt_label[i][j] = cc3d.connected_components(gt_label[i][j], connectivity=26)
+            components = cc3d.connected_components(gt_label[i][j], connectivity=26)
+            gt_label[i][j] = components
+            print('No. of lesions (gt):', torch.unique(torch.tensor(gt_label[i][j])))
     gt_label_cc = torch.tensor(gt_label)
     gt_label_cc = gt_label_cc.to(net_output.device)
+    print('Total number of lesions (gt):', torch.unique(gt_label_cc))
 
     num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
+    print('Number of lesions:', num_gt_lesions)
 
     total_dice_scores = torch.tensor([]).to(net_output.device)
     total_counts = torch.tensor([]).to(net_output.device)
@@ -180,6 +189,8 @@ def instance_scores(net_output, gt):
     for batch_idx in range(gt_label_cc.shape[0]):
         for channel_idx in range(gt_label_cc.shape[1]):
             for volume_idx in range(gt_label_cc.shape[2]):
+                # print('For Volume:', volume_idx)
+                # print()
 
                 pred_cc_volume = pred_label_cc[batch_idx, channel_idx, volume_idx]
                 gt_cc_volume = gt_label_cc[batch_idx, channel_idx, volume_idx]
@@ -227,7 +238,9 @@ def instance_scores(net_output, gt):
                 fp = fp[fp != 0]
 
                 volume_dice_score = lesion_dice_scores / (num_gt_lesions + len(fp))
+                # print('Dice Score:', volume_dice_score)
                 count = num_gt_lesions - len(tp)
+                # print('Count:', count)
 
                 volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
                 count = torch.tensor([count]).to(net_output.device)
