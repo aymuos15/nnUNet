@@ -218,6 +218,7 @@ def instance_scores(net_output, gt):
                 # loop_start = time.time()
 
                 for gtcomp in range(1, num_gt_lesions + 1):
+                    print('For Lesion:', gtcomp)
                     gt_tmp = (gt_cc_volume == gtcomp)
                     intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
                     intersecting_cc = intersecting_cc[intersecting_cc != 0]
