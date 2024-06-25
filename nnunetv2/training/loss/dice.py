@@ -186,6 +186,12 @@ def instance_scores(net_output, gt):
             fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
             fp = fp[fp != 0]
 
+            if num_lesions + len(fp) > 0:
+                volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
+            else:
+                # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
+                volume_dice_score = 0  # or any other appropriate value
+
             volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
             count = num_lesions - len(tp)
 
@@ -194,7 +200,6 @@ def instance_scores(net_output, gt):
 
             total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
             total_counts = torch.cat([total_counts, count])
-            print()
 
     total_dice_scores = total_dice_scores.mean()
     total_counts = total_counts.mean()
