@@ -6,8 +6,6 @@ from torch import nn
 
 import cc3d
 
-import time
-
 class SoftDiceLoss(nn.Module):
     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
                  ddp: bool = True, clip_tp: float = None):
@@ -76,7 +74,7 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
         if self.apply_nonlin is not None:
             x = self.apply_nonlin(x)
 
-        # make everything shape (b, c)
+        
         axes = tuple(range(2, x.ndim))
 
         with torch.no_grad():
@@ -84,7 +82,7 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
                 y = y.view((y.shape[0], 1, *y.shape[1:]))
 
             if x.shape == y.shape:
-                # if this is the case then gt is probably already a one hot encoding
+                
                 y_onehot = y
             else:
                 y_onehot = torch.zeros(x.shape, device=x.device, dtype=torch.bool)
@@ -95,7 +93,7 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
 
             sum_gt = y_onehot.sum(axes) if loss_mask is None else (y_onehot * loss_mask).sum(axes)
 
-        # this one MUST be outside the with torch.no_grad(): context. Otherwise no gradients for you
+        
         if not self.do_bg:
             x = x[:, 1:]
 
@@ -122,10 +120,6 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
         return -dc
 
 def dice(pred, gt):
-    # Convert inputs to PyTorch tensors
-    # pred = torch.as_tensor(pred, dtype=torch.bool)
-    # gt = torch.as_tensor(gt, dtype=torch.bool)
-
     intersection = torch.sum(pred * gt)
     sum_pred = torch.sum(pred)
     sum_gt = torch.sum(gt)
@@ -137,132 +131,70 @@ def instance_scores(net_output, gt):
             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
 
         if net_output.shape == gt.shape:
-            # if this is the case then gt is probably already a one hot encoding
+            
             y_onehot = gt
         else:
             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
             y_onehot.scatter_(1, gt.long(), 1)
 
-    ###########################################################################################
-    # clone_start = time.time()
-
-    print('Unique values in net_output:', torch.unique(net_output))
-    pred_clone = net_output.clone()
-    pred_label = pred_clone.cpu().numpy()
-    for i in range(pred_label.shape[0]):
-        print('For Batch:', i)
-        for j in range(pred_label.shape[1]):
-            print('For Channel:', j)
-            # pred_label[i][j] = cc3d.connected_components(pred_label[i][j], connectivity=26)
-            components = cc3d.connected_components(pred_label[i][j], connectivity=26)
-            pred_label[i][j] = components
-            print('No of lesions (pred):', torch.unique(torch.tensor(pred_label[i][j])))
-    pred_label_cc = torch.tensor(pred_label)
-    pred_label_cc = pred_label_cc.to(net_output.device)
-    print('Total number of lesions (pred):', torch.unique(pred_label_cc))
-
-    print('Unique values in gt:', torch.unique(gt))
-    gt_clone = gt.clone()
-    gt_label = gt_clone.cpu().numpy()
-    for i in range(gt_label.shape[0]):
-        print('For Batch:', i)
-        for j in range(gt_label.shape[1]):
-            print('For Channel:', j)
-            # gt_label[i][j] = cc3d.connected_components(gt_label[i][j], connectivity=26)
-            components = cc3d.connected_components(gt_label[i][j], connectivity=26)
-            gt_label[i][j] = components
-            print('No. of lesions (gt):', torch.unique(torch.tensor(gt_label[i][j])))
-    gt_label_cc = torch.tensor(gt_label)
-    gt_label_cc = gt_label_cc.to(net_output.device)
-    print('Total number of lesions (gt):', torch.unique(gt_label_cc))
-
-    num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
-    print('Number of lesions:', num_gt_lesions)
-
+    for batch_idx in range(y_onehot.shape[0]):
+        for channel_idx in range(y_onehot.shape[1]):
+            lbl = y_onehot[batch_idx, channel_idx]
+            lbl = lbl.cpu().numpy()
+            components = cc3d.connected_components(lbl, connectivity=26)
+            components = torch.tensor(components).to(y_onehot.device)
+            y_onehot[batch_idx, channel_idx] = components
+    
+    for batch_idx in range(net_output.shape[0]):
+        for channel_idx in range(net_output.shape[1]):
+            pred = net_output[batch_idx, channel_idx]
+            pred = pred.cpu().numpy()
+            components = cc3d.connected_components(pred, connectivity=26)
+            components = torch.tensor(components).to(net_output.device)
+            net_output[batch_idx, channel_idx] = components
+    
     total_dice_scores = torch.tensor([]).to(net_output.device)
     total_counts = torch.tensor([]).to(net_output.device)
 
-    # clone_end = time.time()
-    # print(f"Time taken for cloning: {clone_end - clone_start}")
-    # print()
-    #? It does not take much time at all. (0.0001s)
-    ###########################################################################################
-    
+    for batch_idx in range(y_onehot.shape[0]):
+        for channel_idx in range(y_onehot.shape[1]):
 
-    #####################################################################################################################
-    # dice_calculation_prep_start = time.time()
+            pred_cc_volume = net_output[batch_idx, channel_idx]
+            gt_cc_volume = y_onehot[batch_idx, channel_idx]
 
-    for batch_idx in range(gt_label_cc.shape[0]):
-        print('For Batch:', batch_idx)
-        for channel_idx in range(gt_label_cc.shape[1]):
-            print('For Channel:', channel_idx)
-            for volume_idx in range(gt_label_cc.shape[2]):
-                print('For Volume:', volume_idx)
-                # print()
+            num_lesions = torch.unique(pred_cc_volume[pred_cc_volume != 0]).size(0)
 
-                pred_cc_volume = pred_label_cc[batch_idx, channel_idx, volume_idx]
-                gt_cc_volume = gt_label_cc[batch_idx, channel_idx, volume_idx]
+            lesion_dice_scores = 0
+            tp = torch.tensor([]).to(pred_cc_volume.device)
 
-                lesion_dice_scores = 0
-                tp = torch.tensor([]).to(pred_cc_volume.device)
-                # fn = torch.tensor([]).to(pred_cc_volume.device)
-
-                # dice_calculation_prep_end = time.time()
-                # print(f"Time taken for dice calculation prep: {dice_calculation_prep_end - dice_calculation_prep_start}")
-                # print()
-
-                #! Is this the bottleneck? 0.02s every iteration.
-    #####################################################################################################################
-
-    #####################################################################################################################
-                # loop_start = time.time()
-
-                for gtcomp in range(1, num_gt_lesions + 1):
-                    print('For Lesion:', gtcomp)
-                    gt_tmp = (gt_cc_volume == gtcomp)
-                    intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
-                    intersecting_cc = intersecting_cc[intersecting_cc != 0]
-
-                    if len(intersecting_cc) > 0:
-                        pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
-                        pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
-                        dice_score = dice(pred_tmp, gt_tmp)
-                        lesion_dice_scores += dice_score
-                        tp = torch.cat([tp, intersecting_cc])
-                    else:
-                        # fn = torch.cat([fn, torch.tensor([gtcomp])])
-                        pass
+            for gtcomp in range(1, num_lesions + 1):
                 
-                # loop_end = time.time()
-                # print(f"Time taken for loop: {loop_end - loop_start}")
-                #? It does not take much time at all.
-    #####################################################################################################################
+                gt_tmp = (gt_cc_volume == gtcomp)
+                intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
+                intersecting_cc = intersecting_cc[intersecting_cc != 0]
 
-    #####################################################################################################################
-                # final_creation_start = time.time()
+                if len(intersecting_cc) > 0:
+                    pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
+                    pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
+                    dice_score = dice(pred_tmp, gt_tmp)
+                    lesion_dice_scores += dice_score
+                    tp = torch.cat([tp, intersecting_cc])
+                else:
+                    pass
 
-                mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp)).to(pred_cc_volume.device)
-                # mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
-                fp = torch.unique(pred_cc_volume[mask], sorted=True)
-                fp = fp[fp != 0]
+            mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
+            fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
+            fp = fp[fp != 0]
 
-                volume_dice_score = lesion_dice_scores / (num_gt_lesions + len(fp))
-                print('Dice Score:', volume_dice_score)
-                count = num_gt_lesions - len(tp)
-                print('Num_GT:', num_gt_lesions)
-                print('TP:', len(tp))
+            volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
+            count = num_lesions - len(tp)
 
-                volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
-                count = torch.tensor([count]).to(net_output.device)
+            volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
+            count = torch.tensor([count]).to(net_output.device)
 
-                total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
-                total_counts = torch.cat([total_counts, count])
-
-                # final_creation_end = time.time()
-                # print(f"Time taken for final creation: {final_creation_end - final_creation_start}")
-                # print()
-                #? It does not take much time at all.
-    #####################################################################################################################
+            total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
+            total_counts = torch.cat([total_counts, count])
+            print()
 
     total_dice_scores = total_dice_scores.mean()
     total_counts = total_counts.mean()
@@ -290,7 +222,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
 
         if net_output.shape == gt.shape:
-            # if this is the case then gt is probably already a one hot encoding
+            
             y_onehot = gt
         else:
             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
@@ -308,13 +240,6 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         fp *= mask_here
         fn *= mask_here
         tn *= mask_here
-        # benchmark whether tiling the mask would be faster (torch.tile). It probably is for large batch sizes
-        # OK it barely makes a difference but the implementation above is a tiny bit faster + uses less vram
-        # (using nnUNetv2_train 998 3d_fullres 0)
-        # tp = torch.stack(tuple(x_i * mask[:, 0] for x_i in torch.unbind(tp, dim=1)), dim=1)
-        # fp = torch.stack(tuple(x_i * mask[:, 0] for x_i in torch.unbind(fp, dim=1)), dim=1)
-        # fn = torch.stack(tuple(x_i * mask[:, 0] for x_i in torch.unbind(fn, dim=1)), dim=1)
-        # tn = torch.stack(tuple(x_i * mask[:, 0] for x_i in torch.unbind(tn, dim=1)), dim=1)
 
     if square:
         tp = tp ** 2
@@ -329,15 +254,3 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         tn = tn.sum(dim=axes, keepdim=False)
 
     return tp, fp, fn, tn
-
-
-if __name__ == '__main__':
-    from nnunetv2.utilities.helpers import softmax_helper_dim1
-    pred = torch.rand((2, 3, 32, 32, 32))
-    ref = torch.randint(0, 3, (2, 32, 32, 32))
-
-    dl_old = SoftDiceLoss(apply_nonlin=softmax_helper_dim1, batch_dice=True, do_bg=False, smooth=0, ddp=False)
-    dl_new = MemoryEfficientSoftDiceLoss(apply_nonlin=softmax_helper_dim1, batch_dice=True, do_bg=False, smooth=0, ddp=False)
-    res_old = dl_old(pred, ref)
-    res_new = dl_new(pred, ref)
-    print(res_old, res_new)
