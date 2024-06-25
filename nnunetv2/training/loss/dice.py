@@ -3,6 +3,7 @@ from typing import Callable
 import torch
 from nnunetv2.utilities.ddp_allgather import AllGatherGrad
 from torch import nn
+import numpy as np
 
 import cc3d
 
@@ -142,7 +143,8 @@ def instance_scores(net_output, gt):
             lbl = y_onehot[batch_idx, channel_idx]
             lbl = lbl.cpu().numpy()
             components = cc3d.connected_components(lbl, connectivity=26)
-            y = torch.tensor(components).to(y_onehot.device)
+            # y = torch.tensor(components).to(y_onehot.device)
+            y = torch.tensor(components.astype(np.uint8)).to(y_onehot.device)
             y_onehot[batch_idx, channel_idx] = y
     
     for batch_idx in range(net_output.shape[0]):
@@ -150,7 +152,8 @@ def instance_scores(net_output, gt):
             pred = net_output[batch_idx, channel_idx]
             pred = pred.cpu().numpy()
             components = cc3d.connected_components(pred, connectivity=26)
-            o = torch.tensor(components).to(net_output.device)
+            # o = torch.tensor(components).to(net_output.device)
+            o = torch.tensor(components.astype(np.uint8)).to(net_output.device)
             net_output[batch_idx, channel_idx] = o
     
     total_dice_scores = torch.tensor([]).to(net_output.device)
