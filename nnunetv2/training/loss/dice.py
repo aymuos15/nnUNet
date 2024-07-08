@@ -127,6 +127,7 @@ def dice(pred, gt):
     return 2.0 * intersection / (sum_pred + sum_gt)
 
 def instance_scores(net_output, gt):
+
     with torch.no_grad():
         if net_output.ndim != gt.ndim:
             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
@@ -137,7 +138,7 @@ def instance_scores(net_output, gt):
         else:
             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
             y_onehot.scatter_(1, gt.long(), 1)
-
+        
     for batch_idx in range(y_onehot.shape[0]):
         for channel_idx in range(y_onehot.shape[1]):
             lbl = y_onehot[batch_idx, channel_idx]
@@ -148,7 +149,7 @@ def instance_scores(net_output, gt):
             y_onehot[batch_idx, channel_idx] = y
     
     for batch_idx in range(net_output.shape[0]):
-        for channel_idx in range(net_output.shape[1]):
+        for channel_idx in range(1, net_output.shape[1]):
             pred = net_output[batch_idx, channel_idx]
             pred = pred.cpu().numpy()
             components = cc3d.connected_components(pred, connectivity=26)
@@ -159,8 +160,8 @@ def instance_scores(net_output, gt):
     total_dice_scores = torch.tensor([]).to(net_output.device)
     total_counts = torch.tensor([]).to(net_output.device)
 
-    for batch_idx in range(y_onehot.shape[0]):
-        for channel_idx in range(y_onehot.shape[1]):
+    for batch_idx in range(net_output.shape[0]):
+        for channel_idx in range(1, net_output.shape[1]):
 
             pred_cc_volume = net_output[batch_idx, channel_idx]
             gt_cc_volume = y_onehot[batch_idx, channel_idx]
@@ -180,10 +181,12 @@ def instance_scores(net_output, gt):
                     pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
                     pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
                     dice_score = dice(pred_tmp, gt_tmp)
+                    print('Dice Score:', dice_score)
                     lesion_dice_scores += dice_score
                     tp = torch.cat([tp, intersecting_cc])
                 else:
-                    pass
+                    print('Dice Score:', 0)
+                    lesion_dice_scores += 0
 
             mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
             fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
@@ -194,6 +197,8 @@ def instance_scores(net_output, gt):
             else:
                 # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
                 volume_dice_score = 0  # or any other appropriate value
+            
+            print('Volume Dice Score:', volume_dice_score)
 
             count = num_lesions - len(tp)
 
@@ -259,5 +264,8 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
         fp = fp.sum(dim=axes, keepdim=False)
         fn = fn.sum(dim=axes, keepdim=False)
         tn = tn.sum(dim=axes, keepdim=False)
+    
+    # print('Dice Score nnuent function:', (2 * tp) / (2 * tp + fp + fn))
+    # Output: Dice Score nnuent function: tensor([0.9943, 0.0000], device='cuda:0')
 
     return tp, fp, fn, tn
