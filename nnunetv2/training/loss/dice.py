@@ -144,7 +144,6 @@ def instance_scores(net_output, gt):
             lbl = y_onehot[batch_idx, channel_idx]
             lbl = lbl.cpu().numpy()
             components = cc3d.connected_components(lbl, connectivity=26)
-            # y = torch.tensor(components).to(y_onehot.device)
             y = torch.tensor(components.astype(np.uint8)).to(y_onehot.device)
             y_onehot[batch_idx, channel_idx] = y
     
@@ -153,7 +152,6 @@ def instance_scores(net_output, gt):
             pred = net_output[batch_idx, channel_idx]
             pred = pred.cpu().numpy()
             components = cc3d.connected_components(pred, connectivity=26)
-            # o = torch.tensor(components).to(net_output.device)
             o = torch.tensor(components.astype(np.uint8)).to(net_output.device)
             net_output[batch_idx, channel_idx] = o
     
@@ -181,11 +179,9 @@ def instance_scores(net_output, gt):
                     pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
                     pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
                     dice_score = dice(pred_tmp, gt_tmp)
-                    print('Dice Score:', dice_score)
                     lesion_dice_scores += dice_score
                     tp = torch.cat([tp, intersecting_cc])
                 else:
-                    print('Dice Score:', 0)
                     lesion_dice_scores += 0
 
             mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
@@ -198,8 +194,6 @@ def instance_scores(net_output, gt):
                 # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
                 volume_dice_score = 0  # or any other appropriate value
             
-            print('Volume Dice Score:', volume_dice_score)
-
             count = num_lesions - len(tp)
 
             volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
