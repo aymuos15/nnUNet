@@ -102,11 +102,13 @@ def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.n
     for batch_idx in range(mask_ref.shape[0]):
         lbl = mask_ref[batch_idx].cpu().numpy()
         components = cc3d.connected_components(lbl, connectivity=26)
+        components = components.astype(np.int32)
         mask_ref[batch_idx] = torch.tensor(components, dtype=torch.long).to(device)
     
     for batch_idx in range(mask_pred.shape[0]):
         pred = mask_pred[batch_idx].cpu().numpy()
         components = cc3d.connected_components(pred, connectivity=26)
+        components = components.astype(np.int32)
         mask_pred[batch_idx] = torch.tensor(components, dtype=torch.long).to(device)
 
     for batch_idx in range(mask_ref.shape[0]):
