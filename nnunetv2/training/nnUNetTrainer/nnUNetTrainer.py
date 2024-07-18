@@ -148,7 +148,7 @@ class nnUNetTrainer(object):
         self.oversample_foreground_percent = 0.33
         self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 2
+        self.num_epochs = 1000
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -1141,7 +1141,7 @@ class nnUNetTrainer(object):
         # handle 'best' checkpointing. lesion_dice is computed by the logger and can be accessed like this
         if self._best_ema is None or self.logger.my_fantastic_logging['lesion_dice'][-1] > self._best_ema:
             self._best_ema = self.logger.my_fantastic_logging['lesion_dice'][-1]
-            self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
+            self.print_to_log_file(f"WOOHOO! New best Lesion Dice: {np.round(self._best_ema, decimals=4)}")
             self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
 
         if self.local_rank == 0:
