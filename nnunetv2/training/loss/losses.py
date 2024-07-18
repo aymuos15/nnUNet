@@ -1006,6 +1006,49 @@ class Region_CE(RegionLoss):
 
         return loss
 
+########################
+''' Dice + Region CE '''
+########################
+class DC_and_RegionCE(nn.Module):
+    def __init__(self, alpha, beta, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
+                 dice_class=MemoryEfficientSoftDiceLoss):
+
+        super(DC_and_RegionCE, self).__init__()
+        if ignore_label is not None:
+            ce_kwargs['ignore_index'] = ignore_label
+
+        self.weight_dice = weight_dice
+        self.weight_ce = weight_ce
+        self.ignore_label = ignore_label
+
+        self.alpha = 0.3
+        self.beta = 0.7
+
+        self.ce = Region_CE()
+        self.tversky = MemoryEfficientSoftDiceLoss(self.alpha, self.beta, **soft_dice_kwargs)
+
+    def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+
+        target = target.unsqueeze(1)
+
+        if self.ignore_label is not None:
+            assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
+                                         '(tversky_and_CE_loss)'
+            mask = target != self.ignore_label
+            target_dice = torch.where(mask, target, 0)
+            num_fg = mask.sum()
+        else:
+            target_dice = target
+            mask = None
+
+        region_ce_loss = self.tversky(net_output, target_dice, loss_mask=mask) \
+            if self.weight_dice != 0 else 0
+        dice_loss = self.ce(net_output, target[:, 0]) \
+            if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
+
+        result = self.weight_ce * dice_loss + self.weight_dice * region_ce_loss
+        return result
+
 ############################
 ''' Blob_Dice__Region_CE '''
 ############################
@@ -1049,104 +1092,104 @@ class BlobDice__RegionCE(nn.Module):
 
         return loss
 
-#############################################
-''' Dice+CE-RegionConstraintSoumya + Dice '''
-#############################################
-class Constrained__DC_and_CE_loss(nn.Module):
-    def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
-                 dice_class=MemoryEfficientSoftDiceLoss):
+# #############################################
+# ''' Dice+CE-RegionConstraintSoumya + Dice '''
+# #############################################
+# class Constrained__DC_and_CE_loss(nn.Module):
+#     def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
+#                  dice_class=MemoryEfficientSoftDiceLoss):
 
-        super(Constrained__DC_and_CE_loss, self).__init__()
-        if ignore_label is not None:
-            ce_kwargs['ignore_index'] = ignore_label
+#         super(Constrained__DC_and_CE_loss, self).__init__()
+#         if ignore_label is not None:
+#             ce_kwargs['ignore_index'] = ignore_label
 
-        self.weight_dice = weight_dice
-        self.weight_ce = weight_ce
+#         self.weight_dice = weight_dice
+#         self.weight_ce = weight_ce
+#         self.ignore_label = ignore_label
+
+#         self.ce = RobustCrossEntropyLoss(**ce_kwargs)
+#         self.dc = dice_class(apply_nonlin=softmax_helper_dim1, **soft_dice_kwargs)
+
+#     def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+
+#         count_constraint = get_count_constraint(net_output, target)
+
+#         # print("Count Constraint: ", count_constraint)
+#         # print(target.shape)
+
+#         # target = target.unsqueeze(1)
+#         # print(target.shape)
+
+#         if self.ignore_label is not None:
+#             assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
+#                                          '(DC_and_CE_loss)'
+#             mask = target != self.ignore_label
+#             target_dice = torch.where(mask, target, 0)
+#             num_fg = mask.sum()
+#         else:
+#             target_dice = target
+#             mask = None
+        
+#         dc_loss = self.dc(net_output, target_dice, loss_mask=mask) \
+#             if self.weight_dice != 0 else 0
+#         ce_loss = self.ce(net_output, target[:, 0]) \
+#             if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
+
+#         # result = self.weight_ce * ce_loss + self.weight_dice * dc_loss
+#         result = count_constraint * ce_loss + self.weight_dice * dc_loss
+#         return result
+
+#####################
+''' InstanceDice  '''
+#####################
+class InstanceDiceLoss(nn.Module):
+    def __init__(self, ignore_label=None):
+        super(InstanceDiceLoss, self).__init__()
         self.ignore_label = ignore_label
 
-        self.ce = RobustCrossEntropyLoss(**ce_kwargs)
-        self.dc = dice_class(apply_nonlin=softmax_helper_dim1, **soft_dice_kwargs)
+    def forward(self, x: torch.Tensor, y: torch.Tensor, loss_mask=None):
+        y = y.squeeze(1)
+        multi_label = torch.zeros_like(y)
+        for i in range(x.shape[0]):
+            multi_label = multi_label.detach().cpu().numpy()
+            multi_label[i] = cc3d.connected_components(y[i].detach().cpu().numpy(), connectivity=26)
+            multi_label = torch.tensor(multi_label)
+        multi_label = multi_label.unsqueeze(1)
+        y = y.unsqueeze(1)
 
-    def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+        x = x.to(y.device)
+        x_label_cc = torch.zeros_like(x)
+        for i in range(x.shape[0]):
+            x_label_cc = x_label_cc.detach().cpu().numpy()
+            x_label_cc[i] = cc3d.connected_components(x[i].detach().cpu().numpy(), connectivity=26)
+            x_label_cc = torch.tensor(x_label_cc)
+        x_label_cc = x_label_cc.to(y.device)
 
-        count_constraint = get_count_constraint(net_output, target)
+        num_gt_lesions = torch.unique(multi_label[multi_label != 0]).size(0)
 
-        # print("Count Constraint: ", count_constraint)
-        # print(target.shape)
+        lesion_dice_scores = 0
+        tp = torch.tensor([], device=y.device)
 
-        # target = target.unsqueeze(1)
-        # print(target.shape)
+        for gtcomp in range(1, num_gt_lesions + 1):
+            gt_tmp = (multi_label == gtcomp)
+            intersecting_cc = torch.unique(x_label_cc[gt_tmp])
+            intersecting_cc = intersecting_cc[intersecting_cc != 0]
 
-        if self.ignore_label is not None:
-            assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
-                                         '(DC_and_CE_loss)'
-            mask = target != self.ignore_label
-            target_dice = torch.where(mask, target, 0)
-            num_fg = mask.sum()
-        else:
-            target_dice = target
-            mask = None
-        
-        dc_loss = self.dc(net_output, target_dice, loss_mask=mask) \
-            if self.weight_dice != 0 else 0
-        ce_loss = self.ce(net_output, target[:, 0]) \
-            if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
+            if len(intersecting_cc) > 0:
+                pred_tmp = torch.zeros_like(x_label_cc, dtype=torch.float32, requires_grad=True)
+                pred_tmp = torch.where(torch.isin(x_label_cc, intersecting_cc), torch.tensor(1., device=y.device), pred_tmp)
+                dice_score = self.dice(pred_tmp, gt_tmp)
+                lesion_dice_scores += dice_score
+                tp = torch.cat([tp, intersecting_cc])
+            else:
+                pass
+            
+        mask = (x_label_cc != 0) & (~torch.isin(x_label_cc, tp))
+        fp = torch.unique(x_label_cc[mask], sorted=True)
+        fp = fp[fp != 0]
 
-        # result = self.weight_ce * ce_loss + self.weight_dice * dc_loss
-        result = count_constraint * ce_loss + self.weight_dice * dc_loss
-        return result
+        return lesion_dice_scores / (num_gt_lesions + len(fp))
 
-def get_count_constraint(pred, gt):
-
-    y = gt
-    x = pred
-
-    # print("Pred: ", x.shape)
-    # print("GT: ", y.shape)
-
-    y = y.squeeze(1)
-    gt_label_cc = torch.zeros_like(y)
-    for i in range(x.shape[0]):
-        gt_label_cc = gt_label_cc.detach().cpu().numpy()
-        gt_label_cc[i] = cc3d.connected_components(y[i].detach().cpu().numpy(), connectivity=26)
-        gt_label_cc = torch.tensor(gt_label_cc)
-        
-    gt_label_cc = gt_label_cc.unsqueeze(1)
-    y = y.unsqueeze(1)
-
-    # print("GT: ", gt_label_cc.shape)
-
-    pred = x.detach().cpu().numpy().astype(np.float32)
-    for i in range(pred.shape[0]):
-        for j in range(pred.shape[1]):
-            pred[i][j] = cc3d.connected_components(pred[i][j], connectivity=26)
-    pred_label_cc = torch.tensor(pred)
-
-    tp = []
-
-    num_gt_lesions = torch.unique(gt_label_cc)
-    num_gt_lesions = len(num_gt_lesions[num_gt_lesions != 0])
-
-    for gtcomp in range(num_gt_lesions):
-        gtcomp += 1
-
-        ## Extracting current lesion
-        gt_tmp = np.zeros_like(gt_label_cc)
-        gt_tmp[gt_label_cc == gtcomp] = 1
-        
-        ## Extracting Predicted true positive lesions
-        pred_tmp = np.copy(pred_label_cc)
-        pred_tmp = pred_tmp*gt_tmp
-
-        intersecting_cc = np.unique(pred_tmp) 
-        intersecting_cc = intersecting_cc[intersecting_cc != 0] 
-
-        for cc in intersecting_cc:
-            tp.append(cc)
-    
-    # print("TP: ", len(tp))
-    # print("GT: ", num_gt_lesions)
-    return num_gt_lesions - len(tp)
 
 ################### Test Losses ######################
 # pred = torch.zeros((2, 3, 32, 32, 32))

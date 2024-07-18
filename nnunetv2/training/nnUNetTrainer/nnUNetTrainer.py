@@ -1136,9 +1136,9 @@ class nnUNetTrainer(object):
         if (current_epoch + 1) % self.save_every == 0 and current_epoch != (self.num_epochs - 1):
             self.save_checkpoint(join(self.output_folder, 'checkpoint_latest.pth'))
 
-        # handle 'best' checkpointing. ema_fg_dice is computed by the logger and can be accessed like this
-        if self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema:
-            self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
+        # handle 'best' checkpointing. lesion_dice is computed by the logger and can be accessed like this
+        if self._best_ema is None or self.logger.my_fantastic_logging['lesion_dice'][-1] > self._best_ema:
+            self._best_ema = self.logger.my_fantastic_logging['lesion_dice'][-1]
             self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
             self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
 
@@ -1350,8 +1350,6 @@ class nnUNetTrainer(object):
             self.print_to_log_file("Validation complete", also_print_to_console=True)
             self.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
                                    also_print_to_console=True)
-            self.print_to_log_file("Mean Validation Instance Dice: ", (metrics['foreground_mean']["Lesion_Dice"]),
-                                   also_print_to_console=True)
 
         self.set_deep_supervision_enabled(True)
         compute_gaussian.cache_clear()
@@ -1380,9 +1378,9 @@ class nnUNetTrainer(object):
                 self.on_validation_epoch_end(val_outputs)
 
                 validation_end_time = time()
-                print('Time taken for validation:', validation_end_time - validation_start_time, 'seconds')
-                print()
 
             self.on_epoch_end()
+
+            self.print_to_log_file(f"Validation time: {np.round(validation_end_time - validation_start_time, decimals=2)} s")
 
         self.on_train_end()
