@@ -148,7 +148,7 @@ class nnUNetTrainer(object):
         self.oversample_foreground_percent = 0.33
         self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_epochs = 2
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -943,6 +943,8 @@ class nnUNetTrainer(object):
 
         empty_cache(self.device)
         self.print_to_log_file("Training done.")
+        self.print_to_log_file("")
+        self.print_to_log_file("")
 
     def on_train_epoch_start(self):
         self.network.train()
@@ -1349,6 +1351,8 @@ class nnUNetTrainer(object):
                                                 self.is_ddp else default_num_processes)
             self.print_to_log_file("Validation complete", also_print_to_console=True)
             self.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
+                                   also_print_to_console=True)
+            self.print_to_log_file("Mean Validation Instance Dice: ", (metrics['foreground_mean']["Lesion_Dice"]),
                                    also_print_to_console=True)
 
         self.set_deep_supervision_enabled(True)
