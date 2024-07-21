@@ -1,265 +1,3 @@
-# from typing import Callable
-
-# import torch
-# from nnunetv2.utilities.ddp_allgather import AllGatherGrad
-# from torch import nn
-
-# import cc3d
-
-# class SoftDiceLoss(nn.Module):
-#     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
-#                  ddp: bool = True, clip_tp: float = None):
-#         """
-#         """
-#         super(SoftDiceLoss, self).__init__()
-
-#         self.do_bg = do_bg
-#         self.batch_dice = batch_dice
-#         self.apply_nonlin = apply_nonlin
-#         self.smooth = smooth
-#         self.clip_tp = clip_tp
-#         self.ddp = ddp
-
-#     def forward(self, x, y, loss_mask=None):
-#         shp_x = x.shape
-
-#         if self.batch_dice:
-#             axes = [0] + list(range(2, len(shp_x)))
-#         else:
-#             axes = list(range(2, len(shp_x)))
-
-#         if self.apply_nonlin is not None:
-#             x = self.apply_nonlin(x)
-
-#         tp, fp, fn, _ = get_tp_fp_fn_tn(x, y, axes, loss_mask, False)
-
-#         if self.ddp and self.batch_dice:
-#             tp = AllGatherGrad.apply(tp).sum(0)
-#             fp = AllGatherGrad.apply(fp).sum(0)
-#             fn = AllGatherGrad.apply(fn).sum(0)
-
-#         if self.clip_tp is not None:
-#             tp = torch.clip(tp, min=self.clip_tp , max=None)
-
-#         nominator = 2 * tp
-#         denominator = 2 * tp + fp + fn
-
-#         dc = (nominator + self.smooth) / (torch.clip(denominator + self.smooth, 1e-8))
-
-#         if not self.do_bg:
-#             if self.batch_dice:
-#                 dc = dc[1:]
-#             else:
-#                 dc = dc[:, 1:]
-#         dc = dc.mean()
-
-#         return -dc
-
-
-# class MemoryEfficientSoftDiceLoss(nn.Module):
-#     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
-#                  ddp: bool = True):
-#         """
-#         saves 1.6 GB on Dataset017 3d_lowres
-#         """
-#         super(MemoryEfficientSoftDiceLoss, self).__init__()
-
-#         self.do_bg = do_bg
-#         self.batch_dice = batch_dice
-#         self.apply_nonlin = apply_nonlin
-#         self.smooth = smooth
-#         self.ddp = ddp
-
-#     def forward(self, x, y, loss_mask=None):
-#         if self.apply_nonlin is not None:
-#             x = self.apply_nonlin(x)
-
-        
-#         axes = tuple(range(2, x.ndim))
-
-#         with torch.no_grad():
-#             if x.ndim != y.ndim:
-#                 y = y.view((y.shape[0], 1, *y.shape[1:]))
-
-#             if x.shape == y.shape:
-                
-#                 y_onehot = y
-#             else:
-#                 y_onehot = torch.zeros(x.shape, device=x.device, dtype=torch.bool)
-#                 y_onehot.scatter_(1, y.long(), 1)
-
-#             if not self.do_bg:
-#                 y_onehot = y_onehot[:, 1:]
-
-#             sum_gt = y_onehot.sum(axes) if loss_mask is None else (y_onehot * loss_mask).sum(axes)
-
-        
-#         if not self.do_bg:
-#             x = x[:, 1:]
-
-#         if loss_mask is None:
-#             intersect = (x * y_onehot).sum(axes)
-#             sum_pred = x.sum(axes)
-#         else:
-#             intersect = (x * y_onehot * loss_mask).sum(axes)
-#             sum_pred = (x * loss_mask).sum(axes)
-
-#         if self.batch_dice:
-#             if self.ddp:
-#                 intersect = AllGatherGrad.apply(intersect).sum(0)
-#                 sum_pred = AllGatherGrad.apply(sum_pred).sum(0)
-#                 sum_gt = AllGatherGrad.apply(sum_gt).sum(0)
-
-#             intersect = intersect.sum(0)
-#             sum_pred = sum_pred.sum(0)
-#             sum_gt = sum_gt.sum(0)
-
-#         dc = (2 * intersect + self.smooth) / (torch.clip(sum_gt + sum_pred + self.smooth, 1e-8))
-
-#         dc = dc.mean()
-#         return -dc
-
-# def dice(pred, gt):
-#     intersection = torch.sum(pred * gt)
-#     sum_pred = torch.sum(pred)
-#     sum_gt = torch.sum(gt)
-#     return 2.0 * intersection / (sum_pred + sum_gt)
-
-# def instance_scores(net_output, gt):
-#     with torch.no_grad():
-#         if net_output.ndim != gt.ndim:
-#             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
-
-#         if net_output.shape == gt.shape:
-            
-#             y_onehot = gt
-#         else:
-#             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
-#             y_onehot.scatter_(1, gt.long(), 1)
-
-#     for batch_idx in range(y_onehot.shape[0]):
-#         for channel_idx in range(y_onehot.shape[1]):
-#             lbl = y_onehot[batch_idx, channel_idx]
-#             lbl = lbl.cpu().numpy()
-#             components = cc3d.connected_components(lbl, connectivity=26)
-#             y = torch.tensor(components).to(y_onehot.device)
-#             y_onehot[batch_idx, channel_idx] = y
-    
-#     for batch_idx in range(net_output.shape[0]):
-#         for channel_idx in range(net_output.shape[1]):
-#             pred = net_output[batch_idx, channel_idx]
-#             pred = pred.cpu().numpy()
-#             components = cc3d.connected_components(pred, connectivity=26)
-#             o = torch.tensor(components).to(net_output.device)
-#             net_output[batch_idx, channel_idx] = o
-    
-#     total_dice_scores = torch.tensor([]).to(net_output.device)
-#     total_counts = torch.tensor([]).to(net_output.device)
-
-#     for batch_idx in range(y_onehot.shape[0]):
-#         for channel_idx in range(y_onehot.shape[1]):
-
-#             pred_cc_volume = net_output[batch_idx, channel_idx]
-#             gt_cc_volume = y_onehot[batch_idx, channel_idx]
-
-#             num_lesions = torch.unique(pred_cc_volume[pred_cc_volume != 0]).size(0)
-
-#             lesion_dice_scores = 0
-#             tp = torch.tensor([]).to(pred_cc_volume.device)
-
-#             for gtcomp in range(1, num_lesions + 1):
-                
-#                 gt_tmp = (gt_cc_volume == gtcomp)
-#                 intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
-#                 intersecting_cc = intersecting_cc[intersecting_cc != 0]
-
-#                 if len(intersecting_cc) > 0:
-#                     pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
-#                     pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
-#                     dice_score = dice(pred_tmp, gt_tmp)
-#                     lesion_dice_scores += dice_score
-#                     tp = torch.cat([tp, intersecting_cc])
-#                 else:
-#                     pass
-
-#             mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
-#             fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
-#             fp = fp[fp != 0]
-
-#             if num_lesions + len(fp) > 0:
-#                 volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
-#             else:
-#                 # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
-#                 volume_dice_score = 0  # or any other appropriate value
-
-#             volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
-#             count = num_lesions - len(tp)
-
-#             volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
-#             count = torch.tensor([count]).to(net_output.device)
-
-#             total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
-#             total_counts = torch.cat([total_counts, count])
-
-#     total_dice_scores = total_dice_scores.mean()
-#     total_counts = total_counts.mean()
-
-#     return total_dice_scores, total_counts
-
-# def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
-#     """
-#     net_output must be (b, c, x, y(, z)))
-#     gt must be a label map (shape (b, 1, x, y(, z)) OR shape (b, x, y(, z))) or one hot encoding (b, c, x, y(, z))
-#     if mask is provided it must have shape (b, 1, x, y(, z)))
-#     :param net_output:
-#     :param gt:
-#     :param axes: can be (, ) = no summation
-#     :param mask: mask must be 1 for valid pixels and 0 for invalid pixels
-#     :param square: if True then fp, tp and fn will be squared before summation
-#     :return:
-#     """
-
-#     if axes is None:
-#         axes = tuple(range(2, net_output.ndim))
-
-#     with torch.no_grad():
-#         if net_output.ndim != gt.ndim:
-#             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
-
-#         if net_output.shape == gt.shape:
-            
-#             y_onehot = gt
-#         else:
-#             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
-#             y_onehot.scatter_(1, gt.long(), 1)
-
-#     tp = net_output * y_onehot
-#     fp = net_output * (1 - y_onehot)
-#     fn = (1 - net_output) * y_onehot
-#     tn = (1 - net_output) * (1 - y_onehot)
-
-#     if mask is not None:
-#         with torch.no_grad():
-#             mask_here = torch.tile(mask, (1, tp.shape[1], *[1 for _ in range(2, tp.ndim)]))
-#         tp *= mask_here
-#         fp *= mask_here
-#         fn *= mask_here
-#         tn *= mask_here
-
-#     if square:
-#         tp = tp ** 2
-#         fp = fp ** 2
-#         fn = fn ** 2
-#         tn = tn ** 2
-
-#     if len(axes) > 0:
-#         tp = tp.sum(dim=axes, keepdim=False)
-#         fp = fp.sum(dim=axes, keepdim=False)
-#         fn = fn.sum(dim=axes, keepdim=False)
-#         tn = tn.sum(dim=axes, keepdim=False)
-
-#     return tp, fp, fn, tn
-
 from typing import Callable
 
 import torch
@@ -1188,114 +926,119 @@ class InstanceDiceLoss(nn.Module):
         fp = torch.unique(x_label_cc[mask], sorted=True)
         fp = fp[fp != 0]
 
+        #count = Number of GT Lesions - Number of Predicted Lesions
+
         return lesion_dice_scores / (num_gt_lesions + len(fp))
 
+##########################
+''' InstanceDice  + CE '''
+##########################
+class InstanceDice_and_CE(nn.Module):
+    def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
+                 dice_class=MemoryEfficientSoftDiceLoss):
 
-################### Test Losses ######################
-# pred = torch.zeros((2, 3, 32, 32, 32))
-# pred[0, 0, 10:20, 10:20, 10:20] = 1
-# ref = torch.zeros((2, 32, 32, 32))
-# ref[0, 10:20, 10:20, 10:20] = 1
+        super(InstanceDice_and_CE, self).__init__()
+        if ignore_label is not None:
+            ce_kwargs['ignore_index'] = ignore_label
 
-# new_dc_ce = Constrained__DC_and_CE_loss({}, {}, weight_ce=1, weight_dice=1, dice_class=MemoryEfficientSoftDiceLoss)
-# new_dc_ce_loss = new_dc_ce(pred, ref)
-# print(new_dc_ce_loss)
+        self.weight_dice = weight_dice
+        self.weight_ce = weight_ce
+        self.ignore_label = ignore_label
 
-# region_ce = Region_CE()
-# region_ce_loss = region_ce(pred, ref)
-# print(region_ce_loss)
+        self.ce = RobustCrossEntropyLoss()
+        self.instancedice = InstanceDiceLoss()
 
-# blobDice__Region_CE = BlobDice__RegionCE(alpha=2, beta=1, soft_dice_kwargs={}, ce_kwargs={})
-# blobDice__Region_CE_loss = blobDice__Region_CE(pred, ref)
-# print(blobDice__Region_CE_loss)
+    def forward(self, net_output: torch.Tensor, target: torch.Tensor):
 
-# dice = MemoryEfficientSoftDiceLoss(apply_nonlin=softmax_helper_dim1, batch_dice=True, do_bg=False, smooth=0, ddp=False)
-# dice_loss = dice(pred, ref)
+        target = target.unsqueeze(1)
 
-# tversky = MemoryEfficientTverskyLoss(fp=0.3, fn=0.7)
-# tversky_loss = tversky(pred, ref)
+        if self.ignore_label is not None:
+            assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
+                                         '(instancedice_and_CE_loss)'
+            mask = target != self.ignore_label
+            target_dice = torch.where(mask, target, 0)
+            num_fg = mask.sum()
+        else:
+            target_dice = target
+            mask = None
 
-# ce = RobustCrossEntropyLoss()
-# ce_loss = ce(pred, ref)
+        instance_dice = self.instancedice(net_output, target_dice, loss_mask=mask) \
+            if self.weight_dice != 0 else 0
+        normal_ce = self.ce(net_output, target[:, 0]) \
+            if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
 
-# topk = TopKLoss()
-# topk_loss = topk(pred, ref) # NOTE: ref is used for TopKLoss
-
-# #################################################################################################
-
-# dc_ce = DC_and_CE_loss({}, {}, weight_ce=1, weight_dice=1, dice_class=MemoryEfficientSoftDiceLoss)
-# dc_ce_loss = dc_ce(pred, ref)
-
-# blob_dice__ce = blobDice_and_CE_loss({}, {}, alpha=2, beta=1)
-# blob_dice__ce_loss = blob_dice__ce(pred, ref)
-
-# blob_dicece__dicece = blobDiceCE_and_DiceCE_loss({}, {}, alpha=2, beta=1)
-# blob_dicece__dicece_loss = blob_dicece__dicece(pred, ref)
-
-# dc_topk = DC_and_topk_loss({}, {}, weight_ce=1, weight_dice=1)
-# dc_topk_loss = dc_topk(pred, ref)
-
-# blob_dice__topk = blobDice_TopK_loss({}, {}, alpha=2, beta=1)
-# blob_dice__topk_loss = blob_dice__topk(pred, ref)
-
-# blob_dicetopk__dicetopk = blobDiceTopK__DiceTopK_loss({}, {}, alpha=2, beta=1)
-# blob_dicetopk__dicetopk_loss = blob_dicetopk__dicetopk(pred, ref)
-
-# tversky_ce = Tversky_and_CE_loss(soft_dice_kwargs={}, ce_kwargs={}, alpha=0.3, beta=0.7)
-# tversky_ce_loss = tversky_ce(pred, ref)
-
-# blob_tversky__ce = blobTversky_and_CE_loss(alpha=0.1, beta=0.9, soft_dice_kwargs={}, ce_kwargs={})
-# blob_tversky__ce_loss = blob_tversky__ce(pred, ref)
-
-# blob_tverskyce__tverskyce = blobTverskyCE_and_TverskyCE_loss(alpha=0.3, beta=0.7, soft_dice_kwargs={}, ce_kwargs={})
-# blob_tverskyce__tverskyce_loss = blob_tverskyce__tverskyce(pred, ref)
-
-# tversky_topk = Tversky_and_TopK_loss(soft_dice_kwargs={}, ce_kwargs={}, alpha=0.3, beta=0.7)
-# tversky_topk_loss = tversky_topk(pred, ref)
-
-# blob_tversky__ce = blobTversky__TopK_loss(soft_dice_kwargs={}, ce_kwargs={}, alpha=0.3, beta=0.7)
-# blob_tversky__ce_loss = blob_tversky__ce(pred, ref)
-
-# blob_tverskyce__tverskyce = blobTverskyTopK__TverskyTopK_loss(alpha=0.3, beta=0.7, soft_dice_kwargs={}, ce_kwargs={})
-# blob_tverskyce__tverskyce_loss = blob_tverskyce__tverskyce(pred, ref)
-
-# blob_tversky__tverskyce = blobTversky__TopK_loss(alpha=0.3, beta=0.7, soft_dice_kwargs={}, ce_kwargs={})
-# blob_tversky__tverskyce_loss = blob_tversky__tverskyce(pred, ref)
+        result = self.weight_ce * normal_ce + self.weight_dice * instance_dice
+        return result
 
 
-# from itertools import count
-# import pandas as pd
+###############
+''' Counter '''
+###############
+def instance_count(x: torch.Tensor, y: torch.Tensor):
+    y = y.squeeze(1)
+    multi_label = torch.zeros_like(y)
+    for i in range(x.shape[0]):
+        multi_label = multi_label.detach().cpu().numpy()
+        multi_label[i] = cc3d.connected_components(y[i].detach().cpu().numpy(), connectivity=26)
+        multi_label = torch.tensor(multi_label)
+    multi_label = multi_label.unsqueeze(1)
+    y = y.unsqueeze(1)
 
-# # Define your losses and initialize a counter
-# losses = [
-#     ('Dice', dice_loss),
-#     ('Tversky', tversky_loss),
-#     ('CE', ce_loss),
-#     ('TopK', topk_loss),
+    x = x.to(y.device)
+    x_label_cc = torch.zeros_like(x)
+    for i in range(x.shape[0]):
+        x_label_cc = x_label_cc.detach().cpu().numpy()
+        x_label_cc[i] = cc3d.connected_components(x[i].detach().cpu().numpy(), connectivity=26)
+        x_label_cc = torch.tensor(x_label_cc)
+    x_label_cc = x_label_cc.to(y.device)
 
-#     ('DC_CE', dc_ce_loss),
-#     ('Blob_Dice__CE', blob_dice__ce_loss),
-#     ('Blob_DiceCE__DiceCE', blob_dicece__dicece_loss),
+    num_gt_lesions = torch.unique(multi_label[multi_label != 0]).size(0)
+    num_pred_lesions = torch.unique(x_label_cc[x_label_cc != 0]).size(0)
 
-#     ('DC_TopK', dc_topk_loss),
-#     ('Blob_Dice__TopK', blob_dice__topk_loss),
-#     ('Blob_DiceTopK__DiceTopK', blob_dicetopk__dicetopk_loss),
+    #count = Number of GT Lesions - Number of Predicted Lesions
+    count = num_gt_lesions - num_pred_lesions
 
-#     ('Tversky_CE', tversky_ce_loss),
-#     ('Blob_Tversky__CE', blob_tversky__ce_loss),
-#     ('Blob_TverskyCE__TverskyCE', blob_tverskyce__tverskyce_loss),
+    return count
 
-#     ('Tversky_TopK', tversky_topk_loss),
-#     ('Blob_Tversky__TopK', blob_tversky__ce_loss),
-#     ('Blob_TverskyCE__TverskyCE', blob_tverskyce__tverskyce_loss),
+# ########################
+# ''' Counter + DiceCE '''
+# ########################
+# class DC_and_CE_Countloss(nn.Module):
+#     def __init__(self, soft_dice_kwargs, ce_kwargs, weight_ce=1, weight_dice=1, ignore_label=None,
+#                  dice_class=MemoryEfficientSoftDiceLoss):
 
-#     ('Blob_Tversky__TverskyTopK', blob_tversky__tverskyce_loss)
-# ]
+#         super(DC_and_CE_Countloss, self).__init__()
+#         if ignore_label is not None:
+#             ce_kwargs['ignore_index'] = ignore_label
 
-# counter = count(start=1)
+#         self.weight_dice = weight_dice
+#         self.weight_ce = weight_ce
+#         self.ignore_label = ignore_label
 
-# # Print serial number along with each loss
-# data = [(next(counter), name, loss_value) for name, loss_value in losses]
-# df = pd.DataFrame(data, columns=["Serial Number", "Loss Name", "Loss Value"])
-# print(df)
+#         self.ce = RobustCrossEntropyLoss(**ce_kwargs)
+#         self.dc = dice_class(apply_nonlin=softmax_helper_dim1, **soft_dice_kwargs)
 
+#     def forward(self, net_output: torch.Tensor, target: torch.Tensor):
+
+#         target = target.unsqueeze(1)
+
+#         if self.ignore_label is not None:
+#             assert target.shape[1] == 1, 'ignore label is not implemented for one hot encoded target variables ' \
+#                                          '(DC_and_CE_loss)'
+#             mask = target != self.ignore_label
+#             target_dice = torch.where(mask, target, 0)
+#             num_fg = mask.sum()
+#         else:
+#             target_dice = target
+#             mask = None
+
+#         dc_loss = self.dc(net_output, target_dice, loss_mask=mask) \
+#             if self.weight_dice != 0 else 0
+#         ce_loss = self.ce(net_output, target[:, 0]) \
+#             if self.weight_ce != 0 and (self.ignore_label is None or num_fg > 0) else 0
+
+#         count = instance_count(net_output, target)
+
+
+#         result = self.weight_ce * ce_loss + self.weight_dice * dc_loss
+#         return result
