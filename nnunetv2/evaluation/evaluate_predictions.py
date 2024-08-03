@@ -293,7 +293,10 @@ def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.n
         dice_scores += dice_score
         tp = torch.cat([tp, tp])
 
-    return dice_score.cpu().numpy(), tp.cpu().numpy()
+    if dice_score > 0:
+        return dice_score.cpu().numpy(), tp.cpu().numpy()
+    else:
+        return 0.0, 0
 
 def compute_metrics(reference_file: str, prediction_file: str, image_reader_writer: BaseReaderWriter,
                     labels_or_regions: Union[List[int], List[Union[int, Tuple[int, ...]]]],
