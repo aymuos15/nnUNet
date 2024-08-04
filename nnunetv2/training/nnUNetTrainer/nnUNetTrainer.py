@@ -57,7 +57,7 @@ from nnunetv2.training.dataloading.utils import get_case_identifiers, unpack_dat
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scores
+from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scores, instance_scoresv2
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.crossval_split import generate_crossval_split
@@ -148,7 +148,7 @@ class nnUNetTrainer(object):
         self.oversample_foreground_percent = 0.33
         self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_epochs = 2
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -1052,7 +1052,7 @@ class nnUNetTrainer(object):
             mask = None
 
         tp, fp, fn, _, = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
-        l_dice, cnt = instance_scores(predicted_segmentation_onehot, target)
+        l_dice, cnt = instance_scoresv2(predicted_segmentation_onehot, target)
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
