@@ -213,6 +213,168 @@ def instance_scores(net_output, gt):
 
     return total_dice_scores, total_counts
 
+import pandas as pd
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+def dice_torch(im1, im2):
+    intersection = torch.sum(im1 * im2)
+    sum_im1 = torch.sum(im1)
+    sum_im2 = torch.sum(im2)
+    return 2.0 * intersection / (sum_im1 + sum_im2)
+
+def collect_legacy_metrics(pred_label_cc, gt_label_cc):
+    legacy_metrics = []
+    tp = torch.tensor([], device=device)
+    fn = torch.tensor([], device=device)
+
+    num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
+
+    tp = torch.tensor([]).to(device)
+
+    for gtcomp in range(1, num_gt_lesions + 1):
+        gt_tmp = (gt_label_cc == gtcomp)
+        intersecting_cc = torch.unique(pred_label_cc[gt_tmp])
+        intersecting_cc = intersecting_cc[intersecting_cc != 0]
+
+        for cc in intersecting_cc:
+            tp = torch.cat([tp, torch.tensor([cc], device=device)])
+            legacy_metrics.append({'GT': gtcomp, 'Pred': cc.item(), 'Dice': dice_torch(pred_label_cc == cc, gt_tmp)})
+
+        if len(intersecting_cc) == 0:
+            legacy_metrics.append({'GT': gtcomp, 'Pred': 0, 'Dice': 0})
+            fn = torch.cat([fn, torch.tensor([gtcomp], device=device)])
+
+    zero_tensor = torch.tensor([0], device=device)
+    fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, torch.cat((tp, zero_tensor)), invert=True)])
+    fp = fp[fp != 0]
+    return legacy_metrics, tp, fp, fn
+
+def find_overlapping_components(prediction_cc, gt_cc):
+    overlapping_components = {}
+    overlapping_components_inverse = {}
+
+    # Iterate over all non-zero elements in the prediction_cc tensor
+    for i, j, k in zip(*torch.nonzero(prediction_cc, as_tuple=True)):
+        prediction_component = prediction_cc[i, j, k].item()
+        gt_component = gt_cc[i, j, k].item()
+
+        if prediction_component != 0 and gt_component != 0:
+            if prediction_component not in overlapping_components:
+                overlapping_components[prediction_component] = set()
+            overlapping_components[prediction_component].add(gt_component)
+
+            if gt_component not in overlapping_components_inverse:
+                overlapping_components_inverse[gt_component] = set()
+            overlapping_components_inverse[gt_component].add(prediction_component)
+
+    # Filter out entries with only one overlapping component
+    overlapping_components = {k: v for k, v in overlapping_components.items() if len(v) > 1}
+    overlapping_components_inverse = {k: v for k, v in overlapping_components_inverse.items() if len(v) > 1}
+
+    return overlapping_components, overlapping_components_inverse
+
+def generate_overlap_metrics(pred_label_cc, gt_label_cc, overlapping_components):
+    overlap_metrics = []
+
+    for pred_component, gt_components in overlapping_components.items():
+        gtcomps = list(gt_components)
+        pred_cc_tmp = (pred_label_cc == pred_component).to(torch.int32)
+        gt_cc_tmp = (gt_label_cc[..., None] == torch.tensor(gtcomps, device=gt_label_cc.device)).any(-1).to(torch.int32)
+        overlap_metrics.append({'GT': gtcomps, 'Pred': pred_component, 'Dice': dice_torch(pred_cc_tmp, gt_cc_tmp)})
+
+    return overlap_metrics
+
+def generate_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components):
+    overlap_metrics = []
+
+    for gt_component, pred_components in overlapping_components.items():
+        predcomps = list(pred_components)
+        gt_cc_tmp = (gt_label_cc == gt_component).to(torch.int32)
+        pred_cc_tmp = (pred_label_cc[..., None] == torch.tensor(predcomps, device=pred_label_cc.device)).any(-1).to(torch.int32)
+        overlap_metrics.append({'GT': gt_component, 'Pred': predcomps, 'Dice': dice_torch(pred_cc_tmp, gt_cc_tmp)})
+
+    return overlap_metrics
+
+def collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse):
+    legacy_metrics, tp, fp, fn = collect_legacy_metrics(pred_label_cc, gt_label_cc)
+    legacy_metrics = pd.DataFrame(legacy_metrics)
+    
+    overlap_metrics = generate_overlap_metrics(pred_label_cc, gt_label_cc, overlapping_components)
+    overlap_metrics = pd.DataFrame(overlap_metrics)
+    
+    overlap_metrics_inverse = generate_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components_inverse)
+    overlap_metrics_inverse = pd.DataFrame(overlap_metrics_inverse)
+
+    
+    initial_metrics_df = pd.concat([legacy_metrics, overlap_metrics, overlap_metrics_inverse], ignore_index=True)
+    return initial_metrics_df, tp, fp, fn
+
+def process_metric_df(df):
+    gt_list = []
+    pred_list = []
+    for gt, pred in zip(df['GT'], df['Pred']):
+        if isinstance(gt, list):
+            gt_list.extend(gt)
+        if isinstance(pred, list):
+            pred_list.extend(pred)
+    combined = set(gt_list + pred_list)
+    indices_to_drop = []
+    for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
+        if isinstance(gt, int) and gt in combined and isinstance(pred, int):
+            indices_to_drop.append(idx)
+    df.drop(indices_to_drop, inplace=True)
+    df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+    df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+    df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
+    return df['Dice'].to_list()
+
+def instance_scoresv2(net_output, gt):
+
+    with torch.no_grad():
+        if net_output.ndim != gt.ndim:
+            gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
+
+        if net_output.shape == gt.shape:
+            
+            y_onehot = gt
+        else:
+            y_onehot = torch.zeros(net_output.shape, device=net_output.device)
+            y_onehot.scatter_(1, gt.long(), 1)
+        
+    for batch_idx in range(y_onehot.shape[0]):
+        for channel_idx in range(y_onehot.shape[1]):
+            lbl = y_onehot[batch_idx, channel_idx]
+            lbl = lbl.cpu().numpy()
+            components = cc3d.connected_components(lbl, connectivity=26)
+            y = torch.tensor(components.astype(np.uint8)).to(y_onehot.device)
+            y_onehot[batch_idx, channel_idx] = y
+    
+    for batch_idx in range(net_output.shape[0]):
+        for channel_idx in range(1, net_output.shape[1]):
+            pred = net_output[batch_idx, channel_idx]
+            pred = pred.cpu().numpy()
+            components = cc3d.connected_components(pred, connectivity=26)
+            o = torch.tensor(components.astype(np.uint8)).to(net_output.device)
+            net_output[batch_idx, channel_idx] = o
+
+    total_dice_scores = torch.tensor([]).to(net_output.device)
+
+    for batch in range(y_onehot.shape[0]):
+        for channel in range(1, y_onehot.shape[1]):
+            pred_label_cc = net_output[batch, channel]
+            gt_label_cc = y_onehot[batch, channel]
+
+            overlapping_components, overlapping_components_inverse = find_overlapping_components(pred_label_cc, gt_label_cc)    
+            final_metric, tp, fp, fn = collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse)
+            dice_score = process_metric_df(final_metric)
+            final_score = sum(dice_score) / len(dice_score) + len(fp)
+
+            total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(net_output.device)])
+    
+    final_dice_score = total_dice_scores.mean()
+        
+    return final_dice_score, torch.tensor([0])
+
 def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
     """
     net_output must be (b, c, x, y(, z)))
