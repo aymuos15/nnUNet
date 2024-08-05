@@ -152,6 +152,7 @@ def compute_tp_fp_fn_tn(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask
 
 #     return volume_dice_score, count
 
+import pandas as pd
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def dice_torch(im1, im2):
@@ -166,8 +167,6 @@ def collect_legacy_metrics(pred_label_cc, gt_label_cc):
     fn = torch.tensor([], device=device)
 
     num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
-
-    tp = torch.tensor([]).to(device)
 
     for gtcomp in range(1, num_gt_lesions + 1):
         gt_tmp = (gt_label_cc == gtcomp)
@@ -248,23 +247,27 @@ def collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, over
     return initial_metrics_df, tp, fp, fn
 
 def process_metric_df(df):
-    gt_list = []
-    pred_list = []
-    for gt, pred in zip(df['GT'], df['Pred']):
-        if isinstance(gt, list):
-            gt_list.extend(gt)
-        if isinstance(pred, list):
-            pred_list.extend(pred)
-    combined = set(gt_list + pred_list)
-    indices_to_drop = []
-    for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
-        if isinstance(gt, int) and gt in combined and isinstance(pred, int):
-            indices_to_drop.append(idx)
-    df.drop(indices_to_drop, inplace=True)
-    df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
-    df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
-    df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
-    return df['Dice'].to_list()
+    if df.empty:
+        return []
+    else:
+        gt_list = []
+        pred_list = []
+        for gt, pred in zip(df['GT'], df['Pred']):
+            if isinstance(gt, list):
+                gt_list.extend(gt)
+            if isinstance(pred, list):
+                pred_list.extend(pred)
+        combined = set(gt_list + pred_list)
+        indices_to_drop = []
+        # if statement to chheck if ground truth is even present in the combined set
+        for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
+            if isinstance(gt, int) and gt in combined and isinstance(pred, int):
+                indices_to_drop.append(idx)
+        df.drop(indices_to_drop, inplace=True)
+        df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+        df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+        df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
+        return df['Dice'].to_list()
 
 def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.ndarray = None):
 
@@ -294,7 +297,12 @@ def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.n
         overlapping_components, overlapping_components_inverse = find_overlapping_components(pred_label_cc, gt_label_cc)    
         final_metric, tp, fp, fn = collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse)
         dice_score = process_metric_df(final_metric)
-        total_dice_scores = torch.cat([total_dice_scores, torch.tensor(dice_score).to(device)])
+
+        if len(dice_score) == 0:
+            dice_score = torch.tensor([0.0]).to(device)
+        else:
+            final_score = sum(dice_score) / (len(dice_score) + len(fp))
+            total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(device)])
     
     final_dice_score = torch.mean(total_dice_scores) 
         
