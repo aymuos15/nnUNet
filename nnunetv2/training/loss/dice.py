@@ -371,9 +371,13 @@ def instance_scoresv2(net_output, gt):
             overlapping_components, overlapping_components_inverse = find_overlapping_components(pred_label_cc, gt_label_cc)    
             final_metric, tp, fp, fn = collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse)
             dice_score = process_metric_df(final_metric)
-            final_score = sum(dice_score) / len(dice_score) + len(fp)
 
-            total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(net_output.device)])
+            if len(dice_score) == 0:
+                return torch.tensor([0]), torch.tensor([0])
+            
+            else:
+                final_score = sum(dice_score) / len(dice_score) + len(fp)
+                total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(net_output.device)])
     
     final_dice_score = total_dice_scores.mean()
         
