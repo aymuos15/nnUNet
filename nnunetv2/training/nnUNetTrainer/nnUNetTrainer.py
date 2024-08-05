@@ -57,7 +57,7 @@ from nnunetv2.training.dataloading.utils import get_case_identifiers, unpack_dat
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scores, instance_scoresv2
+from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, instance_scoresv2
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.crossval_split import generate_crossval_split
