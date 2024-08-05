@@ -126,92 +126,92 @@ class MemoryEfficientSoftDiceLoss(nn.Module):
         dc = dc.mean()
         return -dc
 
-def dice(pred, gt):
-    intersection = torch.sum(pred * gt)
-    sum_pred = torch.sum(pred)
-    sum_gt = torch.sum(gt)
-    return 2.0 * intersection / (sum_pred + sum_gt)
+# def dice(pred, gt):
+#     intersection = torch.sum(pred * gt)
+#     sum_pred = torch.sum(pred)
+#     sum_gt = torch.sum(gt)
+#     return 2.0 * intersection / (sum_pred + sum_gt)
 
-def instance_scores(net_output, gt):
+# def instance_scores(net_output, gt):
 
-    with torch.no_grad():
-        if net_output.ndim != gt.ndim:
-            gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
+#     with torch.no_grad():
+#         if net_output.ndim != gt.ndim:
+#             gt = gt.view((gt.shape[0], 1, *gt.shape[1:]))
 
-        if net_output.shape == gt.shape:
+#         if net_output.shape == gt.shape:
             
-            y_onehot = gt
-        else:
-            y_onehot = torch.zeros(net_output.shape, device=net_output.device)
-            y_onehot.scatter_(1, gt.long(), 1)
+#             y_onehot = gt
+#         else:
+#             y_onehot = torch.zeros(net_output.shape, device=net_output.device)
+#             y_onehot.scatter_(1, gt.long(), 1)
         
-    for batch_idx in range(y_onehot.shape[0]):
-        for channel_idx in range(y_onehot.shape[1]):
-            lbl = y_onehot[batch_idx, channel_idx]
-            lbl = lbl.cpu().numpy()
-            components = cc3d.connected_components(lbl, connectivity=26)
-            y = torch.tensor(components.astype(np.uint8)).to(y_onehot.device)
-            y_onehot[batch_idx, channel_idx] = y
+#     for batch_idx in range(y_onehot.shape[0]):
+#         for channel_idx in range(y_onehot.shape[1]):
+#             lbl = y_onehot[batch_idx, channel_idx]
+#             lbl = lbl.cpu().numpy()
+#             components = cc3d.connected_components(lbl, connectivity=26)
+#             y = torch.tensor(components.astype(np.uint8)).to(y_onehot.device)
+#             y_onehot[batch_idx, channel_idx] = y
     
-    for batch_idx in range(net_output.shape[0]):
-        for channel_idx in range(1, net_output.shape[1]):
-            pred = net_output[batch_idx, channel_idx]
-            pred = pred.cpu().numpy()
-            components = cc3d.connected_components(pred, connectivity=26)
-            o = torch.tensor(components.astype(np.uint8)).to(net_output.device)
-            net_output[batch_idx, channel_idx] = o
+#     for batch_idx in range(net_output.shape[0]):
+#         for channel_idx in range(1, net_output.shape[1]):
+#             pred = net_output[batch_idx, channel_idx]
+#             pred = pred.cpu().numpy()
+#             components = cc3d.connected_components(pred, connectivity=26)
+#             o = torch.tensor(components.astype(np.uint8)).to(net_output.device)
+#             net_output[batch_idx, channel_idx] = o
     
-    total_dice_scores = torch.tensor([]).to(net_output.device)
-    total_counts = torch.tensor([]).to(net_output.device)
+#     total_dice_scores = torch.tensor([]).to(net_output.device)
+#     total_counts = torch.tensor([]).to(net_output.device)
 
-    for batch_idx in range(net_output.shape[0]):
-        for channel_idx in range(1, net_output.shape[1]):
+#     for batch_idx in range(net_output.shape[0]):
+#         for channel_idx in range(1, net_output.shape[1]):
 
-            pred_cc_volume = net_output[batch_idx, channel_idx]
-            gt_cc_volume = y_onehot[batch_idx, channel_idx]
+#             pred_cc_volume = net_output[batch_idx, channel_idx]
+#             gt_cc_volume = y_onehot[batch_idx, channel_idx]
 
-            num_lesions = torch.unique(pred_cc_volume[pred_cc_volume != 0]).size(0)
+#             num_lesions = torch.unique(pred_cc_volume[pred_cc_volume != 0]).size(0)
 
-            lesion_dice_scores = 0
-            tp = torch.tensor([]).to(pred_cc_volume.device)
+#             lesion_dice_scores = 0
+#             tp = torch.tensor([]).to(pred_cc_volume.device)
 
-            for gtcomp in range(1, num_lesions + 1):
+#             for gtcomp in range(1, num_lesions + 1):
                 
-                gt_tmp = (gt_cc_volume == gtcomp)
-                intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
-                intersecting_cc = intersecting_cc[intersecting_cc != 0]
+#                 gt_tmp = (gt_cc_volume == gtcomp)
+#                 intersecting_cc = torch.unique(pred_cc_volume[gt_tmp])
+#                 intersecting_cc = intersecting_cc[intersecting_cc != 0]
 
-                if len(intersecting_cc) > 0:
-                    pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
-                    pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
-                    dice_score = dice(pred_tmp, gt_tmp)
-                    lesion_dice_scores += dice_score
-                    tp = torch.cat([tp, intersecting_cc])
-                else:
-                    lesion_dice_scores += 0
+#                 if len(intersecting_cc) > 0:
+#                     pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
+#                     pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
+#                     dice_score = dice(pred_tmp, gt_tmp)
+#                     lesion_dice_scores += dice_score
+#                     tp = torch.cat([tp, intersecting_cc])
+#                 else:
+#                     lesion_dice_scores += 0
 
-            mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
-            fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
-            fp = fp[fp != 0]
+#             mask = (pred_cc_volume != 0) & (~torch.isin(pred_cc_volume, tp))
+#             fp = torch.unique(pred_cc_volume[mask], sorted=True).to(pred_cc_volume.device)
+#             fp = fp[fp != 0]
 
-            if num_lesions + len(fp) > 0:
-                volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
-            else:
-                # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
-                volume_dice_score = 0  # or any other appropriate value
+#             if num_lesions + len(fp) > 0:
+#                 volume_dice_score = lesion_dice_scores / (num_lesions + len(fp))
+#             else:
+#                 # Handle the case where the denominator is zero, e.g., set volume_dice_score to 0 or handle it appropriately for your use case
+#                 volume_dice_score = 0  # or any other appropriate value
             
-            count = num_lesions - len(tp)
+#             count = num_lesions - len(tp)
 
-            volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
-            count = torch.tensor([count]).to(net_output.device)
+#             volume_dice_score = torch.tensor([volume_dice_score]).to(net_output.device)
+#             count = torch.tensor([count]).to(net_output.device)
 
-            total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
-            total_counts = torch.cat([total_counts, count])
+#             total_dice_scores = torch.cat([total_dice_scores, volume_dice_score])
+#             total_counts = torch.cat([total_counts, count])
 
-    total_dice_scores = total_dice_scores.mean()
-    total_counts = total_counts.mean()
+#     total_dice_scores = total_dice_scores.mean()
+#     total_counts = total_counts.mean()
 
-    return total_dice_scores, total_counts
+#     return total_dice_scores, total_counts
 
 import pandas as pd
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -310,23 +310,27 @@ def collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, over
     return initial_metrics_df, tp, fp, fn
 
 def process_metric_df(df):
-    gt_list = []
-    pred_list = []
-    for gt, pred in zip(df['GT'], df['Pred']):
-        if isinstance(gt, list):
-            gt_list.extend(gt)
-        if isinstance(pred, list):
-            pred_list.extend(pred)
-    combined = set(gt_list + pred_list)
-    indices_to_drop = []
-    for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
-        if isinstance(gt, int) and gt in combined and isinstance(pred, int):
-            indices_to_drop.append(idx)
-    df.drop(indices_to_drop, inplace=True)
-    df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
-    df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
-    df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
-    return df['Dice'].to_list()
+    if df.empty:
+        return []
+    else:
+        gt_list = []
+        pred_list = []
+        for gt, pred in zip(df['GT'], df['Pred']):
+            if isinstance(gt, list):
+                gt_list.extend(gt)
+            if isinstance(pred, list):
+                pred_list.extend(pred)
+        combined = set(gt_list + pred_list)
+        indices_to_drop = []
+        # if statement to chheck if ground truth is even present in the combined set
+        for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
+            if isinstance(gt, int) and gt in combined and isinstance(pred, int):
+                indices_to_drop.append(idx)
+        df.drop(indices_to_drop, inplace=True)
+        df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+        df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+        df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
+        return df['Dice'].to_list()
 
 def instance_scoresv2(net_output, gt):
 
