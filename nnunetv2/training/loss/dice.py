@@ -229,8 +229,6 @@ def collect_legacy_metrics(pred_label_cc, gt_label_cc):
 
     num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
 
-    tp = torch.tensor([]).to(device)
-
     for gtcomp in range(1, num_gt_lesions + 1):
         gt_tmp = (gt_label_cc == gtcomp)
         intersecting_cc = torch.unique(pred_label_cc[gt_tmp])
@@ -376,7 +374,7 @@ def instance_scoresv2(net_output, gt):
                 return torch.tensor([0]), torch.tensor([0])
             
             else:
-                final_score = sum(dice_score) / len(dice_score) + len(fp)
+                final_score = sum(dice_score) / (len(dice_score) + len(fp))
                 total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(net_output.device)])
     
     final_dice_score = total_dice_scores.mean()
