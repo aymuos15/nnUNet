@@ -1,15 +1,13 @@
-import torch
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.robust_ce_loss import RobustCrossEntropyLoss
+from nnunetv2.training.loss.instance_losses import RCELoss
 import numpy as np
 
-
-class nnUNetTrainerCELoss(nnUNetTrainer):
+class nnUNetTrainerRCELoss(nnUNetTrainer):
     def _build_loss(self):
         assert not self.label_manager.has_regions, "regions not supported by this trainer"
-        loss = RobustCrossEntropyLoss(
-            weight=None, ignore_index=self.label_manager.ignore_label if self.label_manager.has_ignore_label else -100
+        loss = RCELoss(
+            weight=None, ignore_index=self.label_manager.ignore_label if self.label_manager.has_ignore_label else -100,
         )
 
         # we give each output a weight which decreases exponentially (division by 2) as the resolution decreases
@@ -24,18 +22,3 @@ class nnUNetTrainerCELoss(nnUNetTrainer):
             # now wrap the loss
             loss = DeepSupervisionWrapper(loss, weights)
         return loss
-
-
-class nnUNetTrainerCELoss_5epochs(nnUNetTrainerCELoss):
-    def __init__(
-        self,
-        plans: dict,
-        configuration: str,
-        fold: int,
-        dataset_json: dict,
-        unpack_dataset: bool = True,
-        device: torch.device = torch.device("cuda"),
-    ):
-        """used for debugging plans etc"""
-        super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
-        self.num_epochs = 5
