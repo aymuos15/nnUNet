@@ -437,6 +437,7 @@ def cluster_scores(net_output, gt):
     for batch in range(net_output.shape[0]):
         for channel in range(net_output.shape[1]):
             components = cc3d.connected_components(overlay[batch, channel], connectivity=26)
+            components = components.astype(np.uint8)
             labelled_overlay[batch, channel] = torch.tensor(components, device=net_output.device)
 
     num_clusters = torch.unique(labelled_overlay[labelled_overlay != 0]).size(0)
