@@ -4,3 +4,6 @@
 2. Use minimal number of images
 3. 3d_lowres
 4. Batch_size = 1
+
+
+`rsync -av --exclude='validation' --exclude='*.pth' --exclude='*.json' --exclude='*.txt' sskundu@h1:/nfs/home/sskundu/nnunet/nnUNet_results/Dataset2024_Mets ./ ` #Get the outputs locally  nicely
