@@ -1,11 +1,12 @@
-from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.losses import InstanceDiceLoss
 import numpy as np
 
-class nnUNetTrainerInstanceDiceLoss(nnUNetTrainer):
+from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
+from nnunetv2.training.loss.instance_losses import bDiceLoss
+from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
+
+class nnUNetTrainerbDiceLoss(nnUNetTrainer):
     def build_loss(self):
-        loss = InstanceDiceLoss(ignore_label=self.label_manager.ignore_label)
+        loss = bDiceLoss(self, ignore_label=self.label_manager.ignore_label)
 
         if self.enable_deep_supervision:
             deep_supervision_scales = self._get_deep_supervision_scales()

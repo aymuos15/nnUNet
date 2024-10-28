@@ -1,12 +1,12 @@
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.losses import Region_CE
+from nnunetv2.training.loss.instance_losses import RCELoss
 import numpy as np
 
-class nnUNetTrainerRegion_CELoss(nnUNetTrainer):
+class nnUNetTrainerRCELoss(nnUNetTrainer):
     def _build_loss(self):
         assert not self.label_manager.has_regions, "regions not supported by this trainer"
-        loss = Region_CE(
+        loss = RCELoss(
             weight=None, ignore_index=self.label_manager.ignore_label if self.label_manager.has_ignore_label else -100,
         )
 

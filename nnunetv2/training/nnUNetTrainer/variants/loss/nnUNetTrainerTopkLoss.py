@@ -1,11 +1,11 @@
 from nnunetv2.training.loss.compound_losses import DC_and_topk_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-import numpy as np
 from nnunetv2.training.loss.robust_ce_loss import TopKLoss
 
+import numpy as np
 
-class nnUNetTrainerTopk10Loss(nnUNetTrainer):
+class nnUNetTrainerTopkLoss(nnUNetTrainer):
     def _build_loss(self):
         assert not self.label_manager.has_regions, "regions not supported by this trainer"
         loss = TopKLoss(

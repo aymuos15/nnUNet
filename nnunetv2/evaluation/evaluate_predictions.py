@@ -7,6 +7,8 @@ from typing import Tuple, List, Union, Optional
 import cc3d
 import torch
 
+import pandas as pd
+
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import subfiles, join, save_json, load_json, \
     isfile
@@ -19,6 +21,36 @@ from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 
+#########################################################################################################
+import cupy as cp
+from cucim.skimage import measure as cucim_measure
+
+#! GPU connected components
+def get_connected_components(img, connectivity=None):
+
+    img_cupy = cp.asarray(img)
+    labeled_img, _ = cucim_measure.label(img_cupy, connectivity=connectivity, return_num=True)
+    labeled_img_torch = torch.as_tensor(labeled_img, device=img.device)
+
+    return labeled_img_torch
+
+#! Dice
+# Define the optimized function
+def torch_dice(im1, im2):
+    
+    # Ensure the tensors are on the same device
+    im1 = im1.to(im2.device)
+    im2 = im2.to(im1.device)
+
+    # Compute Dice coefficient using optimized operations
+    intersection = torch.sum(im1 * im2)
+    im1_sum = torch.sum(im1)
+    im2_sum = torch.sum(im2)
+    
+    dice_score = (2. * intersection) / (im1_sum + im2_sum)
+
+    return dice_score
+#########################################################################################################
 
 def label_or_region_to_key(label_or_region: Union[int, Tuple[int]]):
     return str(label_or_region)
@@ -88,11 +120,6 @@ def compute_tp_fp_fn_tn(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask
     tn = np.sum(((~mask_ref) & (~mask_pred)) & use_mask)
     return tp, fp, fn, tn
 
-def dice(pred, target):
-    smooth = 1e-5
-    intersection = (pred & target).float().sum()
-    return (2. * intersection + smooth) / (pred.float().sum() + target.float().sum() + smooth)
-
 def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.ndarray = None):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -128,7 +155,7 @@ def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.n
             if len(intersecting_cc) > 0:
                 pred_tmp = torch.zeros_like(pred_cc_volume, dtype=torch.bool)
                 pred_tmp[torch.isin(pred_cc_volume, intersecting_cc)] = True
-                dice_score = dice(pred_tmp, gt_tmp)
+                dice_score = torch_dice(pred_tmp, gt_tmp)
                 lesion_dice_scores += dice_score
                 tp = torch.cat([tp, intersecting_cc])
             else:
@@ -150,6 +177,199 @@ def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.n
 
     return volume_dice_score, count
 
+# import pandas as pd
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# def dice_torch(im1, im2):
+#     intersection = torch.sum(im1 * im2)
+#     sum_im1 = torch.sum(im1)
+#     sum_im2 = torch.sum(im2)
+#     return 2.0 * intersection / (sum_im1 + sum_im2)
+
+# def collect_legacy_metrics(pred_label_cc, gt_label_cc):
+#     legacy_metrics = []
+#     tp = torch.tensor([], device=device)
+#     fn = torch.tensor([], device=device)
+
+#     num_gt_lesions = torch.unique(gt_label_cc[gt_label_cc != 0]).size(0)
+
+#     for gtcomp in range(1, num_gt_lesions + 1):
+#         gt_tmp = (gt_label_cc == gtcomp)
+#         intersecting_cc = torch.unique(pred_label_cc[gt_tmp])
+#         intersecting_cc = intersecting_cc[intersecting_cc != 0]
+
+#         for cc in intersecting_cc:
+#             tp = torch.cat([tp, torch.tensor([cc], device=device)])
+#             legacy_metrics.append({'GT': gtcomp, 'Pred': cc.item(), 'Dice': dice_torch(pred_label_cc == cc, gt_tmp)})
+
+#         if len(intersecting_cc) == 0:
+#             legacy_metrics.append({'GT': gtcomp, 'Pred': 0, 'Dice': 0})
+#             fn = torch.cat([fn, torch.tensor([gtcomp], device=device)])
+
+#     zero_tensor = torch.tensor([0], device=device)
+#     fp = torch.unique(pred_label_cc[torch.isin(pred_label_cc, torch.cat((tp, zero_tensor)), invert=True)])
+#     fp = fp[fp != 0]
+#     return legacy_metrics, tp, fp, fn
+
+# def find_overlapping_components(prediction_cc, gt_cc):
+#     overlapping_components = {}
+#     overlapping_components_inverse = {}
+
+#     # Iterate over all non-zero elements in the prediction_cc tensor
+#     for i, j, k in zip(*torch.nonzero(prediction_cc, as_tuple=True)):
+#         prediction_component = prediction_cc[i, j, k].item()
+#         gt_component = gt_cc[i, j, k].item()
+
+#         if prediction_component != 0 and gt_component != 0:
+#             if prediction_component not in overlapping_components:
+#                 overlapping_components[prediction_component] = set()
+#             overlapping_components[prediction_component].add(gt_component)
+
+#             if gt_component not in overlapping_components_inverse:
+#                 overlapping_components_inverse[gt_component] = set()
+#             overlapping_components_inverse[gt_component].add(prediction_component)
+
+#     # Filter out entries with only one overlapping component
+#     overlapping_components = {k: v for k, v in overlapping_components.items() if len(v) > 1}
+#     overlapping_components_inverse = {k: v for k, v in overlapping_components_inverse.items() if len(v) > 1}
+
+#     return overlapping_components, overlapping_components_inverse
+
+# def generate_overlap_metrics(pred_label_cc, gt_label_cc, overlapping_components):
+#     overlap_metrics = []
+
+#     for pred_component, gt_components in overlapping_components.items():
+#         gtcomps = list(gt_components)
+#         pred_cc_tmp = (pred_label_cc == pred_component).to(torch.int32)
+#         gt_cc_tmp = (gt_label_cc[..., None] == torch.tensor(gtcomps, device=gt_label_cc.device)).any(-1).to(torch.int32)
+#         overlap_metrics.append({'GT': gtcomps, 'Pred': pred_component, 'Dice': dice_torch(pred_cc_tmp, gt_cc_tmp)})
+
+#     return overlap_metrics
+
+# def generate_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components):
+#     overlap_metrics = []
+
+#     for gt_component, pred_components in overlapping_components.items():
+#         predcomps = list(pred_components)
+#         gt_cc_tmp = (gt_label_cc == gt_component).to(torch.int32)
+#         pred_cc_tmp = (pred_label_cc[..., None] == torch.tensor(predcomps, device=pred_label_cc.device)).any(-1).to(torch.int32)
+#         overlap_metrics.append({'GT': gt_component, 'Pred': predcomps, 'Dice': dice_torch(pred_cc_tmp, gt_cc_tmp)})
+
+#     return overlap_metrics
+
+# def collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse):
+#     legacy_metrics, tp, fp, fn = collect_legacy_metrics(pred_label_cc, gt_label_cc)
+#     legacy_metrics = pd.DataFrame(legacy_metrics)
+    
+#     overlap_metrics = generate_overlap_metrics(pred_label_cc, gt_label_cc, overlapping_components)
+#     overlap_metrics = pd.DataFrame(overlap_metrics)
+    
+#     overlap_metrics_inverse = generate_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components_inverse)
+#     overlap_metrics_inverse = pd.DataFrame(overlap_metrics_inverse)
+
+    
+#     initial_metrics_df = pd.concat([legacy_metrics, overlap_metrics, overlap_metrics_inverse], ignore_index=True)
+#     return initial_metrics_df, tp, fp, fn
+
+# def process_metric_df(df):
+#     if df.empty:
+#         return []
+#     else:
+#         gt_list = []
+#         pred_list = []
+#         for gt, pred in zip(df['GT'], df['Pred']):
+#             if isinstance(gt, list):
+#                 gt_list.extend(gt)
+#             if isinstance(pred, list):
+#                 pred_list.extend(pred)
+#         combined = set(gt_list + pred_list)
+#         indices_to_drop = []
+#         # if statement to chheck if ground truth is even present in the combined set
+#         for idx, (gt, pred) in enumerate(zip(df['GT'], df['Pred'])):
+#             if isinstance(gt, int) and gt in combined and isinstance(pred, int):
+#                 indices_to_drop.append(idx)
+#         df.drop(indices_to_drop, inplace=True)
+#         df['GT'] = df['GT'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+#         df['Pred'] = df['Pred'].apply(lambda x: tuple(x) if isinstance(x, list) else x)
+#         df.drop_duplicates(subset=['GT', 'Pred'], inplace=True)
+#         return df['Dice'].to_list()
+
+# def instance_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.ndarray = None):
+
+#     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+#     mask_ref = torch.tensor(mask_ref, dtype=torch.long).to(device)
+#     mask_pred = torch.tensor(mask_pred, dtype=torch.long).to(device)
+
+#     for batch_idx in range(mask_ref.shape[0]):
+#         lbl = mask_ref[batch_idx].cpu().numpy()
+#         components = cc3d.connected_components(lbl, connectivity=26)
+#         components = components.astype(np.int32)
+#         mask_ref[batch_idx] = torch.tensor(components, dtype=torch.long).to(device)
+    
+#     for batch_idx in range(mask_pred.shape[0]):
+#         pred = mask_pred[batch_idx].cpu().numpy()
+#         components = cc3d.connected_components(pred, connectivity=26)
+#         components = components.astype(np.int32)
+#         mask_pred[batch_idx] = torch.tensor(components, dtype=torch.long).to(device)
+
+#     total_dice_scores = torch.tensor([]).to(device)
+
+#     for batch in range(mask_ref.shape[0]):
+#         pred_label_cc = mask_pred[batch]
+#         gt_label_cc = mask_ref[batch]
+
+#         overlapping_components, overlapping_components_inverse = find_overlapping_components(pred_label_cc, gt_label_cc)    
+#         final_metric, tp, fp, fn = collect_all_metrics(pred_label_cc, gt_label_cc, overlapping_components, overlapping_components_inverse)
+#         dice_score = process_metric_df(final_metric)
+
+#         if len(dice_score) == 0:
+#             dice_score = torch.tensor([0.0]).to(device)
+#         else:
+#             final_score = sum(dice_score) / (len(dice_score) + len(fp))
+#             total_dice_scores = torch.cat([total_dice_scores, torch.tensor([final_score]).to(device)])
+    
+#     final_dice_score = torch.mean(total_dice_scores) 
+        
+#     return final_dice_score, torch.tensor([0])
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+def cluster_dice(mask_ref: np.ndarray, mask_pred: np.ndarray, ignore_mask: np.ndarray = None):
+
+    mask_ref = torch.tensor(mask_ref, dtype=torch.long).to(device)
+    mask_pred = torch.tensor(mask_pred, dtype=torch.long).to(device)
+
+    overlay = mask_pred + mask_ref
+    overlay[overlay > 0] = 1
+
+    labelled_overlay = torch.zeros_like(overlay)
+
+    overlay = overlay.to(mask_pred.device)
+    labelled_overlay = labelled_overlay.to(mask_pred.device)
+
+    overlay = overlay.detach().cpu().numpy()
+    for batch in range(mask_pred.shape[0]):
+            overlay_batch = overlay[batch]
+            labelled_overlay_batch = cc3d.connected_components(overlay_batch, connectivity=26)
+            labelled_overlay_batch = labelled_overlay_batch.astype(np.int32)
+            labelled_overlay[batch] = torch.tensor(labelled_overlay_batch, dtype=torch.long).to(mask_pred.device)
+
+    num_clusters = torch.unique(labelled_overlay[labelled_overlay != 0]).size(0)
+
+    score_tally = torch.tensor([]).to(mask_pred.device)
+
+    for cluster in range(1, num_clusters + 1):
+        cluster_mask = (labelled_overlay == cluster).float()
+
+        pred_cluster = torch.logical_and(mask_pred, cluster_mask).to(mask_pred.device)
+        gt_cluster = torch.logical_and(mask_ref, cluster_mask).to(mask_pred.device)
+
+        score = torch_dice(pred_cluster, gt_cluster)
+        score_tally = torch.cat((score_tally, score.unsqueeze(0)))
+    
+    return torch.mean(score_tally), torch.tensor([0])
+
 def compute_metrics(reference_file: str, prediction_file: str, image_reader_writer: BaseReaderWriter,
                     labels_or_regions: Union[List[int], List[Union[int, Tuple[int, ...]]]],
                     ignore_label: int = None) -> dict:
@@ -169,7 +389,7 @@ def compute_metrics(reference_file: str, prediction_file: str, image_reader_writ
         mask_ref = region_or_label_to_mask(seg_ref, r)
         mask_pred = region_or_label_to_mask(seg_pred, r)
         tp, fp, fn, tn = compute_tp_fp_fn_tn(mask_ref, mask_pred, ignore_mask)
-        lesion_dice , _ = instance_dice(mask_ref, mask_pred, ignore_mask)
+        lesion_dice, _ = cluster_dice(mask_ref, mask_pred, ignore_mask)
         if tp + fp + fn == 0:
             results['metrics'][r]['Dice'] = np.nan
             results['metrics'][r]['IoU'] = np.nan

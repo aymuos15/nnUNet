@@ -1,12 +1,12 @@
 import numpy as np
 
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.losses import blobDice_and_CE_loss
+from nnunetv2.training.loss.instance_losses import bTversky_TopKLoss
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
-class nnUNetTrainerblobDice_and_CELoss(nnUNetTrainer):
+class nnUNetTrainerbTversky_TopKLoss(nnUNetTrainer):
     def build_loss(self):
-        loss = blobDice_and_CE_loss(self, ignore_label=self.label_manager.ignore_label)
+        loss = bTversky_TopKLoss(self, ignore_label=self.label_manager.ignore_label)
 
         if self.enable_deep_supervision:
             deep_supervision_scales = self._get_deep_supervision_scales()

@@ -54,23 +54,27 @@ class nnUNetLogger(object):
             self.log('ema_fg_dice', new_ema_pseudo_dice, epoch)
 
     def plot_progress_png(self, output_folder):
-        # we infer the epoch form our internal logging
-        epoch = min([len(i) for i in self.my_fantastic_logging.values()]) - 1  # lists of epoch 0 have len 1
+        epoch = min([len(i) for i in self.my_fantastic_logging.values()]) - 1
         sns.set(font_scale=2.5)
         fig, ax_all = plt.subplots(3, 1, figsize=(30, 54))
-        # regular progress.png as we are used to from previous nnU-Net versions
+        
+        # First subplot - modified to include lesion dice
         ax = ax_all[0]
         ax2 = ax.twinx()
         x_values = list(range(epoch + 1))
+        
+        # Original metrics
         ax.plot(x_values, self.my_fantastic_logging['train_losses'][:epoch + 1], color='b', ls='-', label="loss_tr", linewidth=4)
         ax.plot(x_values, self.my_fantastic_logging['val_losses'][:epoch + 1], color='r', ls='-', label="loss_val", linewidth=4)
-        ax2.plot(x_values, self.my_fantastic_logging['mean_fg_dice'][:epoch + 1], color='g', ls='dotted', label="pseudo dice",
-                 linewidth=3)
-        ax2.plot(x_values, self.my_fantastic_logging['ema_fg_dice'][:epoch + 1], color='g', ls='-', label="pseudo dice (mov. avg.)",
-                 linewidth=4)
+        ax2.plot(x_values, self.my_fantastic_logging['mean_fg_dice'][:epoch + 1], color='g', ls='dotted', label="pseudo dice", linewidth=3)
+        ax2.plot(x_values, self.my_fantastic_logging['ema_fg_dice'][:epoch + 1], color='g', ls='-', label="pseudo dice (mov. avg.)", linewidth=4)
+        
+        # Add lesion dice
+        ax2.plot(x_values, self.my_fantastic_logging['lesion_dice'][:epoch + 1], color='m', ls='-', label="lesion dice", linewidth=4)
+        
         ax.set_xlabel("epoch")
         ax.set_ylabel("loss")
-        ax2.set_ylabel("pseudo dice")
+        ax2.set_ylabel("dice scores")
         ax.legend(loc=(0, 1))
         ax2.legend(loc=(0.2, 1))
 

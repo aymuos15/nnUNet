@@ -1,14 +1,12 @@
-from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.losses import blobTversky__TopK
 import numpy as np
 
-class nnUNetTrainerblobTversky__TopKLoss(nnUNetTrainer):
+from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
+from nnunetv2.training.loss.instance_losses import bDice_CELoss
+from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
+
+class nnUNetTrainerbDice_CELoss(nnUNetTrainer):
     def build_loss(self):
-        loss = blobTversky__TopK({'batch_dice': self.configuration_manager.batch_dice, 'smooth': 1e-5, 'do_bg': False, 'ddp': self.is_ddp},
-                                    {}, weight_ce=1, weight_dice=1,
-                                    alpha=0.1, beta=0.9,
-                                    ignore_label=self.label_manager.ignore_label)
+        loss = bDice_CELoss(self, ignore_label=self.label_manager.ignore_label)
 
         if self.enable_deep_supervision:
             deep_supervision_scales = self._get_deep_supervision_scales()
