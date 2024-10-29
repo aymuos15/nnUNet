@@ -88,13 +88,6 @@ class SoftDiceLoss(nn.Module):
 
         return -dc
 
-# def get_connected_components(img, connectivity=None):
-#     img_cupy = cp.asarray(img.cpu().numpy())
-#     labeled_img, num_features = cucim_measure.label(img_cupy, connectivity=connectivity, return_num=True)
-#     labeled_img_torch = torch.tensor(labeled_img, device=img.device, dtype=torch.float32)
-#     return labeled_img_torch, num_features
-
-
 class MemoryEfficientSoftDiceLoss(nn.Module):
     def __init__(self, apply_nonlin: Callable = None, batch_dice: bool = False, do_bg: bool = True, smooth: float = 1.,
                  ddp: bool = True):
