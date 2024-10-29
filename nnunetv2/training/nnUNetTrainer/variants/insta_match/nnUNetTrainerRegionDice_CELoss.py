@@ -2,7 +2,7 @@ import numpy as np
 
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.Insta_Match_Losses.instance import RegionDice_CELoss
+from nnunetv2.training.Insta_Match_Losses.compound import RegionDice_CELoss
 
 class nnUNetTrainerRegionDice_CELoss(nnUNetTrainer):
     def build_loss(self):

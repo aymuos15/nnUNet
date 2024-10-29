@@ -71,6 +71,20 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
                  device: torch.device = torch.device('cuda')):
+        # From https://grugbrain.dev/. Worth a read ya big brains ;-)
+        # apex predator of grug is complexity
+        # complexity bad
+        # say again:
+        # complexity very bad
+        # you say now:
+        # complexity very, very bad
+        # given choice between complexity or one on one against t-rex, grug take t-rex: at least grug see t-rex
+        # complexity is spirit demon that enter codebase through well-meaning but ultimately very clubbable non grug-brain developers and project managers who not fear complexity spirit demon or even know about sometime
+        # one day code base understandable and grug can get work done, everything good!
+        # next day impossible: complexity demon spirit has entered code and very dangerous situation!
+        # OK OK I am guilty. But I tried.
+        # https://www.osnews.com/images/comics/wtfm.jpg
+        # https://i.pinimg.com/originals/26/b2/50/26b250a738ea4abc7a5af4d42ad93af0.jpg
 
         self.is_ddp = dist.is_available() and dist.is_initialized()
         self.local_rank = 0 if not self.is_ddp else dist.get_rank()
@@ -130,9 +144,9 @@ class nnUNetTrainer(object):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.oversample_foreground_percent = 0.33
-        self.num_iterations_per_epoch = 2
+        self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_epochs = 2
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -277,14 +291,12 @@ class nnUNetTrainer(object):
         variants can be loaded at inference time (inference will use the same nnUNetTrainer that was used for
         training, so if you change the network architecture during training by deriving a new trainer class then
         inference will know about it).
-
         If you need to know how many segmentation outputs your custom architecture needs to have, use the following snippet:
         > label_manager = plans_manager.get_label_manager(dataset_json)
         > label_manager.num_segmentation_heads
         (why so complicated? -> We can have either classical training (classes) or regions. If we have regions,
         the number of outputs is != the number of classes. Also there is the ignore label for which no output
         should be generated. label_manager takes care of all that for you.)
-
         """
         return get_network_from_plans(
             architecture_class_name,
@@ -1050,7 +1062,7 @@ class nnUNetTrainer(object):
             tp_hard = tp_hard[1:]
             fp_hard = fp_hard[1:]
             fn_hard = fn_hard[1:]
-        
+
         # print('Before return')
         # print(l)
         # print(l.detach().cpu().numpy())
@@ -1345,7 +1357,7 @@ class nnUNetTrainer(object):
 
     def run_training(self):
         self.on_train_start()
-        
+
         for epoch in range(self.current_epoch, self.num_epochs):
             self.on_epoch_start()
 
@@ -1359,7 +1371,7 @@ class nnUNetTrainer(object):
             with torch.no_grad():
 
                 validation_start_time = time()
-                
+
                 self.on_validation_epoch_start()
                 val_outputs = []
                 for batch_id in range(self.num_val_iterations_per_epoch):
