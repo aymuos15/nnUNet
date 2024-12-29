@@ -4,7 +4,9 @@ from torch import nn
 
 import numpy as np
 
-from nnunetv2.training.Insta_Match_Losses.helpers import RegionLoss #RegionCE loss
+from typing import Tuple
+
+from nnunetv2.training.Insta_Match_Losses.helpers import CompoundLoss #RegionCE loss
 
 class RobustCrossEntropyLoss(nn.CrossEntropyLoss):
     """
@@ -34,20 +36,33 @@ class TopKLoss(RobustCrossEntropyLoss):
         res, _ = torch.topk(res.view((-1, )), int(num_voxels * self.k / 100), sorted=False)
         return res.mean()
 
-class RCELoss(RegionLoss):
-    def forward(self, inputs: torch.Tensor, labels: torch.Tensor):
+class RCELoss(CompoundLoss):
+    def forward(
+        self, 
+        inputs: torch.Tensor, 
+        labels: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        
         if len(labels.shape) == len(inputs.shape):
             assert labels.shape[1] == 1
             labels = labels[:, 0]
+        
+        # unsqueeze the labels to match the shape of the inputs
+        if labels.dim() == 4:
+            labels = labels.unsqueeze(dim=1)
         labels = labels.long()
 
         ce = RobustCrossEntropyLoss()
         loss_ce = ce(inputs, labels)
 
-        gt_proportion, valid_mask = self.get_gt_proportion(self.mode, labels, inputs.shape)
-        pred_proportion = self.get_pred_proportion(self.mode, inputs, temp=self.temp, valid_mask=valid_mask)
+        gt_proportion, valid_mask = self.get_gt_proportion(
+            self.mode, labels, inputs.shape
+        )
+        pred_proportion = self.get_pred_proportion(
+            self.mode, inputs, temp=self.temp, valid_mask=valid_mask
+        )
         loss_reg = (pred_proportion - gt_proportion).abs().mean()
 
         loss = loss_ce + self.alpha * loss_reg
-
+        
         return loss

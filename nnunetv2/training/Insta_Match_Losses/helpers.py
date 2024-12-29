@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import cupy as cp
 from cucim.skimage import measure as cucim_measure
@@ -458,80 +458,136 @@ def compute_loss(
 
 
 #! RegionLoss
-EPS: float = 1e-10
+class LossMode:
+    BINARY = "binary"
+    MULTICLASS = "multiclass"
+    MULTILABEL = "multilabel"
 
-def get_region_proportion(x: torch.Tensor, valid_mask: torch.Tensor = None) -> torch.Tensor:
+EPS = 1e-10
+
+def expand_onehot_labels(
+    labels: torch.Tensor, 
+    target_shape: torch.Size, 
+    ignore_index: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    bin_labels = labels.new_zeros(target_shape)
+    valid_mask = (labels >= 0) & (labels != ignore_index)
+    inds = torch.nonzero(valid_mask, as_tuple=True)
+
+    if inds[0].numel() > 0:
+        if labels.dim() == 3:
+            bin_labels[inds[0], labels[valid_mask], inds[1], inds[2]] = 1
+        elif labels.dim() == 4:
+            bin_labels[inds[0], labels[valid_mask], inds[1], inds[2], inds[3]] = 1
+        else:
+            bin_labels[inds[0], labels[valid_mask]] = 1
+
+    return bin_labels, valid_mask
+
+def get_region_proportion(
+    x: torch.Tensor, 
+    valid_mask: Optional[torch.Tensor] = None
+) -> torch.Tensor:
     if valid_mask is not None:
-        x = torch.einsum("bcwhd,bwhd->bcwhd", x, valid_mask)
-        cardinality = torch.einsum("bwhd->b", valid_mask).unsqueeze(dim=1).repeat(1, x.shape[1])
+        if valid_mask.dim() == 4:
+            x = torch.einsum("bcwh,bcwh->bcwh", x, valid_mask)
+            cardinality = torch.einsum("bcwh->bc", valid_mask)
+        else:
+            x = torch.einsum("bcwh,bwh->bcwh", x, valid_mask)
+            cardinality = torch.einsum("bwh->b", valid_mask).unsqueeze(dim=1).repeat(1, x.shape[1])
+    else:
+        cardinality = x.shape[2] * x.shape[3]
+
+    return (torch.einsum("bcwh->bc", x) + EPS) / (cardinality + EPS)
+
+def get_region_proportion_3d(
+    x: torch.Tensor, 
+    valid_mask: Optional[torch.Tensor] = None
+) -> torch.Tensor:
+    if valid_mask is not None:
+        if valid_mask.dim() == 5:
+            x = torch.einsum("bcxyz,bcxyz->bcxyz", x, valid_mask)
+            cardinality = torch.einsum("bcxyz->bc", valid_mask)
+        else:
+            x = torch.einsum("bcxyz,bxyz->bcxyz", x, valid_mask)
+            cardinality = torch.einsum("bxyz->b", valid_mask).unsqueeze(dim=1).repeat(1, x.shape[1])
     else:
         cardinality = x.shape[2] * x.shape[3] * x.shape[4]
 
-    region_proportion = (torch.einsum("bcwhd->bc", x) + EPS) / (cardinality + EPS)
+    return (torch.einsum("bcxyz->bc", x) + EPS) / (cardinality + EPS)
 
-    return region_proportion
-
-class RegionLoss(nn.Module):
-    def __init__(self, 
-                #  mode: str,
-                 alpha: float = 1.,
-                 factor: float = 1.,
-                 step_size: int = 0,
-                 max_alpha: float = 100.,
-                 temp: float = 1.,
-                 ignore_index: int = 255,
-                 background_index: int = -1,
-                 weight: Optional[torch.Tensor] = None) -> None:
+class CompoundLoss(nn.Module):
+    def __init__(
+        self,
+        alpha: float = 1.,
+        factor: float = 1.,
+        step_size: int = 0,
+        max_alpha: float = 100.,
+        temp: float = 1.,
+        ignore_index: int = 255,
+        background_index: int = -1,
+        weight: Optional[torch.Tensor] = None
+    ) -> None:
         super().__init__()
-        self.mode = 'binary'
+        # valid_modes = {LossMode.BINARY, LossMode.MULTILABEL, LossMode.MULTICLASS}
+        self.mode = LossMode.BINARY        
         self.alpha = alpha
-        self.max_alpha = 1
+        self.max_alpha = max_alpha
         self.factor = factor
         self.step_size = step_size
-        self.temp = 1
+        self.temp = temp
         self.ignore_index = ignore_index
         self.background_index = background_index
         self.weight = weight
 
-    def cross_entropy(self, inputs: torch.Tensor, labels: torch.Tensor):
-        if len(labels.shape) == len(inputs.shape):
-            assert labels.shape[1] == 1
-            labels = labels[:, 0]
-
+    def cross_entropy(
+        self, 
+        inputs: torch.Tensor, 
+        labels: torch.Tensor
+    ) -> torch.Tensor:
+        if self.mode == LossMode.MULTICLASS:
+            return F.cross_entropy(
+                inputs, labels, weight=self.weight, ignore_index=self.ignore_index
+            )
+        
         if labels.dim() == 3:
             labels = labels.unsqueeze(dim=1)
-        loss = F.binary_cross_entropy_with_logits(inputs, labels.type(torch.float32))
-        return loss
+        return F.binary_cross_entropy_with_logits(inputs, labels.type(torch.float32))
 
     def adjust_alpha(self, epoch: int) -> None:
         if self.step_size == 0:
             return
         if (epoch + 1) % self.step_size == 0:
-            curr_alpha = self.alpha
             self.alpha = min(self.alpha * self.factor, self.max_alpha)
-            print("CompoundLoss : Adjust the tradeoff param alpha : {:.3g} -> {:.3g}".format(curr_alpha, self.alpha))
 
-    def get_gt_proportion(self, mode: str,
-                          labels: torch.Tensor,
-                          target_shape,
-                          ignore_index: int = 1000):
+    def get_gt_proportion(
+        self,
+        mode: str,
+        labels: torch.Tensor,
+        target_shape: torch.Size,
+        ignore_index: int = 255
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        if mode == LossMode.MULTICLASS:
+            bin_labels, valid_mask = expand_onehot_labels(labels, target_shape, ignore_index)
+        else:
+            valid_mask = (labels >= 0) & (labels != ignore_index)
+            bin_labels = labels.unsqueeze(dim=1) if labels.dim() == 3 else labels
 
-        valid_mask = (labels >= 0) & (labels != ignore_index)
-
-        if labels.dim() == 3:
-            labels = labels.unsqueeze(dim=1)
-        bin_labels = labels
-        bin_labels = bin_labels.unsqueeze(dim=1)
-
-        gt_proportion = get_region_proportion(bin_labels, valid_mask)
-
+        get_prop_fn = get_region_proportion_3d if bin_labels.dim() == 5 else get_region_proportion
+        gt_proportion = get_prop_fn(bin_labels, valid_mask)
         return gt_proportion, valid_mask
 
-    def get_pred_proportion(self, mode: str,
-                            logits: torch.Tensor,
-                            temp: float = 1.0,
-                            valid_mask=None):
+    def get_pred_proportion(
+        self,
+        mode: str,
+        logits: torch.Tensor,
+        temp: float = 1.0,
+        valid_mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        if mode == LossMode.MULTICLASS:
+            preds = F.log_softmax(temp * logits, dim=1).exp()
+        else:
+            preds = F.logsigmoid(temp * logits).exp()
 
-        preds = F.logsigmoid(temp * logits).exp()
-        pred_proportion = get_region_proportion(preds, valid_mask)
-        return pred_proportion
+        get_prop_fn = get_region_proportion_3d if preds.dim() == 5 else get_region_proportion
+        return get_prop_fn(preds, valid_mask)

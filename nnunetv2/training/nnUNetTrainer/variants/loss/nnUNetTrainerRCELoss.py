@@ -1,6 +1,6 @@
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.training.loss.instance_losses import RCELoss
+from nnunetv2.training.Insta_Match_Losses.distribution import RCELoss
 import numpy as np
 
 class nnUNetTrainerRCELoss(nnUNetTrainer):
