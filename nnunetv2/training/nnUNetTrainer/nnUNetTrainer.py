@@ -57,7 +57,7 @@ from nnunetv2.training.dataloading.utils import get_case_identifiers, unpack_dat
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss, DC_and_BCE_loss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, cluster_scores
+from nnunetv2.training.loss.dice import get_tp_fp_fn_tn, MemoryEfficientSoftDiceLoss, cluster_scores, panoptic_scores
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.collate_outputs import collate_outputs
 from nnunetv2.utilities.crossval_split import generate_crossval_split
@@ -146,7 +146,7 @@ class nnUNetTrainer(object):
         self.oversample_foreground_percent = 0.33
         self.num_iterations_per_epoch = 250
         self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_epochs = 10
         self.current_epoch = 0
         self.enable_deep_supervision = True
 
@@ -1049,7 +1049,10 @@ class nnUNetTrainer(object):
             mask = None
 
         tp, fp, fn, _, = get_tp_fp_fn_tn(predicted_segmentation_onehot, target, axes=axes, mask=mask)
-        l_dice, cnt = cluster_scores(predicted_segmentation_onehot, target)
+        #! ##################################################################
+        # l_dice, cnt = cluster_scores(predicted_segmentation_onehot, target)
+        l_dice, tp_pq, fn_pq, fp_pq = panoptic_scores(predicted_segmentation_onehot, target)
+        #! ##################################################################
 
         tp_hard = tp.detach().cpu().numpy()
         fp_hard = fp.detach().cpu().numpy()
@@ -1067,8 +1070,11 @@ class nnUNetTrainer(object):
         # print(l)
         # print(l.detach().cpu().numpy())
 
+        #! ################################################################################################################
         return {'loss': l.detach().cpu().numpy(), 'tp_hard': tp_hard, 'fp_hard': fp_hard, 'fn_hard': fn_hard, 
-                'cnt': cnt.detach().cpu().numpy(), 'dice_lesion': l_dice.detach().cpu().numpy()}
+                'tp': tp_pq, 'fn': fn_pq, 'fp': fp_pq, 'dice_lesion': l_dice} #! This is for panoptic DSC
+                # 'cnt': cnt.detach().cpu().numpy(), 'dice_lesion': l_dice.detach().cpu().numpy()} #! This is for cluster DSC
+        #! ################################################################################################################
 
     def on_validation_epoch_end(self, val_outputs: List[dict]):
         outputs_collated = collate_outputs(val_outputs)
@@ -1095,25 +1101,47 @@ class nnUNetTrainer(object):
             dist.all_gather_object(losses_val, outputs_collated['loss'])
             loss_here = np.vstack(losses_val).mean()
 
-            cnt = [None for _ in range(world_size)]
-            dist.all_gather_object(cnt, outputs_collated['cnt'])
-            cnt_here = np.vstack(cnt).mean()
+            #! ################################################################################
+            # cnt = [None for _ in range(world_size)] #! This is for cluster DSC
+            # dist.all_gather_object(cnt, outputs_collated['cnt'])
+            # cnt_here = np.vstack(cnt).mean()
+
+            tp_pq = [None for _ in range(world_size)]
+            dist.all_gather_object(tp_pq, outputs_collated['tp'])
+            tp_pq = np.vstack(tp_pq).sum(0)
+
+            fp_pq = [None for _ in range(world_size)]
+            dist.all_gather_object(fp_pq, outputs_collated['fp'])
+            fp_pq = np.vstack(fp_pq).sum(0)
+
+            fn_pq = [None for _ in range(world_size)]
+            dist.all_gather_object(fn_pq, outputs_collated['fn'])
+            fn_pq = np.vstack(fn_pq).sum(0)
 
             dice_lesion = [None for _ in range(world_size)]
             dist.all_gather_object(dice_lesion, outputs_collated['dice_lesion'])
             dice_lesion_here = np.vstack(dice_lesion).mean()
         else:
             loss_here = np.mean(outputs_collated['loss'])
-            cnt_here = np.mean(outputs_collated['cnt'])
+            # cnt_here = np.mean(outputs_collated['cnt']) #! This is for cluster DSC
             dice_lesion_here = np.mean(outputs_collated['dice_lesion'])
+            tp_pq = np.mean(outputs_collated['tp'], 0)
+            fp_pq = np.mean(outputs_collated['fp'], 0)
+            fn_pq = np.mean(outputs_collated['fn'], 0)
+            #! ################################################################################
 
         global_dc_per_class = [i for i in [2 * i / (2 * i + j + k) for i, j, k in zip(tp, fp, fn)]]
         mean_fg_dice = np.nanmean(global_dc_per_class)
         self.logger.log('mean_fg_dice', mean_fg_dice, self.current_epoch)
         self.logger.log('dice_per_class_or_region', global_dc_per_class, self.current_epoch)
         self.logger.log('val_losses', loss_here, self.current_epoch)
-        self.logger.log('counts', cnt_here, self.current_epoch)
+        # ! ################################################################################
+        # self.logger.log('counts', cnt_here, self.current_epoch) #! This is for cluster DSC
         self.logger.log('lesion_dice', dice_lesion_here, self.current_epoch)
+        self.logger.log('TP_PQ', tp_pq, self.current_epoch)
+        self.logger.log('FP_PQ', fp_pq, self.current_epoch)
+        self.logger.log('FN_PQ', fn_pq, self.current_epoch)
+        # ! ################################################################################
 
     def on_epoch_start(self):
         self.logger.log('epoch_start_timestamps', time(), self.current_epoch)
@@ -1125,8 +1153,14 @@ class nnUNetTrainer(object):
         self.print_to_log_file('val_loss', np.round(self.logger.my_fantastic_logging['val_losses'][-1], decimals=4))
         self.print_to_log_file('Pseudo dice', [np.round(i, decimals=4) for i in
                                                self.logger.my_fantastic_logging['dice_per_class_or_region'][-1]])
+        
+        # ! ################################################################################
         self.print_to_log_file('Lesion Dice', np.round(self.logger.my_fantastic_logging['lesion_dice'][-1], decimals=4))
-        self.print_to_log_file('Count', self.logger.my_fantastic_logging['counts'][-1])
+        # self.print_to_log_file('Count', self.logger.my_fantastic_logging['counts'][-1]) #! This is for cluster DSC
+        self.print_to_log_file('PQ_TP', self.logger.my_fantastic_logging['TP_PQ'][-1])
+        self.print_to_log_file('PQ_FP', self.logger.my_fantastic_logging['FP_PQ'][-1])
+        self.print_to_log_file('PQ_FN', self.logger.my_fantastic_logging['FN_PQ'][-1])
+        # ! ################################################################################
         self.print_to_log_file(
             f"Epoch time: {np.round(self.logger.my_fantastic_logging['epoch_end_timestamps'][-1] - self.logger.my_fantastic_logging['epoch_start_timestamps'][-1], decimals=2)} s")
 
@@ -1138,7 +1172,8 @@ class nnUNetTrainer(object):
         # handle 'best' checkpointing. lesion_dice is computed by the logger and can be accessed like this
         if self._best_ema is None or self.logger.my_fantastic_logging['lesion_dice'][-1] > self._best_ema:
             self._best_ema = self.logger.my_fantastic_logging['lesion_dice'][-1]
-            self.print_to_log_file(f"WOOHOO! New best Lesion Dice: {np.round(self._best_ema, decimals=4)}")
+            self.print_to_log_file(f"WOOHOO! New best Panoptic Dice: {np.round(self._best_ema, decimals=4)}")
+            # self.print_to_log_file(f"WOOHOO! New best Cluster Dice: {np.round(self._best_ema, decimals=4)}")
             self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
 
         if self.local_rank == 0:
@@ -1349,7 +1384,7 @@ class nnUNetTrainer(object):
             self.print_to_log_file("Validation complete", also_print_to_console=True)
             self.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
                                    also_print_to_console=True)
-            self.print_to_log_file("Mean Validation Instance Dice: ", (metrics['foreground_mean']["Lesion_Dice"]),
+            self.print_to_log_file("Mean Validation Instance Dice: ", (metrics['foreground_mean']["lesion_Dice"]),
                                    also_print_to_console=True)
 
         self.set_deep_supervision_enabled(True)

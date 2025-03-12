@@ -22,7 +22,9 @@ class nnUNetLogger(object):
             'train_losses': list(),
             'val_losses': list(),
             'lesion_dice': list(),
-            'counts': list(),
+            'TP_PQ': list(),
+            'FP_PQ': list(),
+            'FN_PQ': list(),
             'lrs': list(),
             'epoch_start_timestamps': list(),
             'epoch_end_timestamps': list()
@@ -56,7 +58,7 @@ class nnUNetLogger(object):
     def plot_progress_png(self, output_folder):
         epoch = min([len(i) for i in self.my_fantastic_logging.values()]) - 1
         sns.set(font_scale=2.5)
-        fig, ax_all = plt.subplots(3, 1, figsize=(30, 54))
+        fig, ax_all = plt.subplots(4, 1, figsize=(30, 72))  # Changed to 4 subplots and increased figure height
         
         # First subplot - modified to include lesion dice
         ax = ax_all[0]
@@ -95,6 +97,16 @@ class nnUNetLogger(object):
         ax.plot(x_values, self.my_fantastic_logging['lrs'][:epoch + 1], color='b', ls='-', label="learning rate", linewidth=4)
         ax.set_xlabel("epoch")
         ax.set_ylabel("learning rate")
+        ax.legend(loc=(0, 1))
+        
+        # New 4th subplot for TP, FP, FN metrics
+        ax = ax_all[3]
+        ax.plot(x_values, self.my_fantastic_logging['TP_PQ'][:epoch + 1], color='c', ls='-', label="TP", linewidth=4)
+        ax.plot(x_values, self.my_fantastic_logging['FP_PQ'][:epoch + 1], color='y', ls='-', label="FP", linewidth=4)
+        ax.plot(x_values, self.my_fantastic_logging['FN_PQ'][:epoch + 1], color='k', ls='-', label="FN", linewidth=4)
+        ax.set_xlabel("epoch")
+        ax.set_ylabel("count")
+        ax.set_title("Detection Metrics (TP, FP, FN)")
         ax.legend(loc=(0, 1))
 
         plt.tight_layout()
