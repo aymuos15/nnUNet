@@ -6,9 +6,9 @@ from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
 from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 from torch import nn
 
-from nnunetv2.experiment_planning.experiment_planners.default_experiment_planner import ExperimentPlanner
+from nnunetv2.experiment_planning.planners.standard.default_planner import ExperimentPlanner
 
-from nnunetv2.experiment_planning.experiment_planners.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
 
 
 class ResEncUNetPlanner(ExperimentPlanner):

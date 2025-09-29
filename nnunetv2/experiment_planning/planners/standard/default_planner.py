@@ -9,7 +9,7 @@ from dynamic_network_architectures.architectures.unet import PlainConvUNet
 from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 
 from nnunetv2.configuration import ANISO_THRESHOLD
-from nnunetv2.experiment_planning.experiment_planners.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
 from nnunetv2.preprocessing.normalization.map_channel_name_to_normalization import get_normalization_scheme

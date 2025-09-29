@@ -1,6 +1,6 @@
 from typing import Union, List, Tuple
 
-from nnunetv2.experiment_planning.experiment_planners.residual_unets.residual_encoder_unet_planners import \
+from nnunetv2.experiment_planning.planners.residual_unets.residual_encoder_unet_planners import \
     nnUNetPlannerResEncL
 from nnunetv2.preprocessing.resampling.no_resampling import no_resampling_hack
 
