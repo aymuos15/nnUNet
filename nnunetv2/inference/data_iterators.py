@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from batchgenerators.dataloading.data_loader import DataLoader
 
-from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
+from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
 
