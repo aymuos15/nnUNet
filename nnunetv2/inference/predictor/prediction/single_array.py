@@ -47,7 +47,7 @@ def predict_single_npy_array(predictor,
     predicted_logits = predict_logits_from_preprocessed_data(predictor, data)
 
     # Convert to segmentation
-    from nnunetv2.inference.export_prediction import convert_predicted_logits_to_segmentation_with_correct_shape
+    from ..postprocessing.export_prediction import convert_predicted_logits_to_segmentation_with_correct_shape
     segmentation = convert_predicted_logits_to_segmentation_with_correct_shape(
         predicted_logits,
         predictor.plans_manager,
@@ -59,7 +59,7 @@ def predict_single_npy_array(predictor,
 
     # Export if output file specified
     if output_file_truncated is not None:
-        from nnunetv2.inference.export_prediction import export_prediction_from_logits
+        from ..postprocessing.export_prediction import export_prediction_from_logits
         export_prediction_from_logits(
             predicted_logits,
             image_properties,

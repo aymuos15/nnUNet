@@ -8,11 +8,11 @@ from typing import Union, List
 import torch
 from batchgenerators.utilities.file_and_folder_operations import save_json, join
 from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
-from nnunetv2.inference.export_prediction import (
+from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape
 )
-from nnunetv2.inference.sliding_window_prediction import compute_gaussian
+from ..utils.sliding_window_prediction import compute_gaussian
 from nnunetv2.utilities.helpers import empty_cache
 from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 

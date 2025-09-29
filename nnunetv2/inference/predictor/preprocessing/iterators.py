@@ -2,7 +2,7 @@
 
 from typing import List, Union
 import numpy as np
-from nnunetv2.inference.data_iterators import (
+from .data_iterators import (
     preprocessing_iterator_fromfiles,
     preprocessing_iterator_fromnpy
 )

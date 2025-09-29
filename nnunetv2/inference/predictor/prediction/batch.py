@@ -12,11 +12,11 @@ from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAu
 from nnunetv2.configuration import default_num_processes
 from nnunetv2.utilities.file_path_utilities import check_workers_alive_and_busy
 from nnunetv2.utilities.helpers import empty_cache
-from nnunetv2.inference.export_prediction import (
+from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape
 )
-from nnunetv2.inference.sliding_window_prediction import compute_gaussian
+from ..utils.sliding_window_prediction import compute_gaussian
 
 
 def predict_from_data_iterator(predictor,

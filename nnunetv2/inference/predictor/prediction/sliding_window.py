@@ -10,7 +10,7 @@ import torch
 from tqdm import tqdm
 
 from nnunetv2.configuration import default_num_processes
-from nnunetv2.inference.sliding_window_prediction import compute_steps_for_sliding_window, compute_gaussian
+from ..utils.sliding_window_prediction import compute_steps_for_sliding_window, compute_gaussian
 from nnunetv2.utilities.helpers import empty_cache
 
 
