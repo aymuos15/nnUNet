@@ -6,7 +6,7 @@ from .checkpointing.save import save_checkpoint
 from .checkpointing.load import load_checkpoint
 from .data.datasets import do_split, get_tr_and_val_datasets
 from .data.loaders import get_dataloaders
-from .initialization.network import set_deep_supervision_enabled
+from .initialization.network import set_deep_supervision_enabled, build_network_architecture
 from .lifecycle.training import run_training
 from .loss.builder import _build_loss, _get_deep_supervision_scales
 from .state.initialization import setup_trainer_state, initialize_trainer
@@ -78,3 +78,18 @@ class nnUNetTrainer(object):
     def run_training(self):
         """Main training loop - delegated to lifecycle.training module."""
         return run_training(self)
+
+    @staticmethod
+    def build_network_architecture(architecture_class_name: str,
+                                   arch_init_kwargs: dict,
+                                   arch_init_kwargs_req_import,
+                                   num_input_channels: int,
+                                   num_output_channels: int,
+                                   enable_deep_supervision: bool = True):
+        """Build network architecture - delegated to initialization.network module."""
+        return build_network_architecture(architecture_class_name,
+                                           arch_init_kwargs,
+                                           arch_init_kwargs_req_import,
+                                           num_input_channels,
+                                           num_output_channels,
+                                           enable_deep_supervision)
