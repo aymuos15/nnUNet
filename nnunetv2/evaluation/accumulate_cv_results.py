@@ -3,7 +3,7 @@ from typing import Union, List, Tuple
 
 from batchgenerators.utilities.file_and_folder_operations import load_json, join, isdir, maybe_mkdir_p, subfiles, isfile
 
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
@@ -12,7 +12,7 @@ from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
 def accumulate_cv_results(trained_model_folder,
                           merged_output_folder: str,
                           folds: Union[List[int], Tuple[int, ...]],
-                          num_processes: int = default_num_processes,
+                          num_processes: int = DEFAULT_NUM_PROCESSES,
                           overwrite: bool = True):
     """
     There are a lot of things that can get fucked up, so the simplest way to deal with potential problems is to

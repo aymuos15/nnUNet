@@ -7,7 +7,7 @@ from typing import List, Union, Tuple
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import load_json, join, subfiles, \
     maybe_mkdir_p, isdir, save_pickle, load_pickle, isfile
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.utilities.label_handling.label_handling import LabelManager
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
@@ -48,7 +48,7 @@ def merge_files(list_of_files,
 def ensemble_folders(list_of_input_folders: List[str],
                      output_folder: str,
                      save_merged_probabilities: bool = False,
-                     num_processes: int = default_num_processes,
+                     num_processes: int = DEFAULT_NUM_PROCESSES,
                      dataset_json_file_or_dict: str = None,
                      plans_json_file_or_dict: str = None):
     """we need too much shit for this function. Problem is that we now have to support region-based training plus
@@ -115,8 +115,8 @@ def entry_point_ensemble_folders():
     parser.add_argument('-i', nargs='+', type=str, required=True,
                         help='list of input folders')
     parser.add_argument('-o', type=str, required=True, help='output folder')
-    parser.add_argument('-np', type=int, required=False, default=default_num_processes,
-                        help=f"Numbers of processes used for ensembling. Default: {default_num_processes}")
+    parser.add_argument('-np', type=int, required=False, default=DEFAULT_NUM_PROCESSES,
+                        help=f"Numbers of processes used for ensembling. Default: {DEFAULT_NUM_PROCESSES}")
     parser.add_argument('--save_npz', action='store_true', required=False, help='Set this flag to store output '
                                                                                 'probabilities in separate .npz files')
 
@@ -127,7 +127,7 @@ def entry_point_ensemble_folders():
 def ensemble_crossvalidations(list_of_trained_model_folders: List[str],
                               output_folder: str,
                               folds: Union[Tuple[int, ...], List[int]] = (0, 1, 2, 3, 4),
-                              num_processes: int = default_num_processes,
+                              num_processes: int = DEFAULT_NUM_PROCESSES,
                               overwrite: bool = True) -> None:
     """
     Feature: different configurations can now have different splits

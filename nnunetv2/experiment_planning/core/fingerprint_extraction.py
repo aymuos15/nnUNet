@@ -2,7 +2,7 @@ from typing import List, Type
 
 import nnunetv2
 from batchgenerators.utilities.file_and_folder_operations import join
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.experiment_planning.dataset.fingerprint.extractor import DatasetFingerprintExtractor
 from nnunetv2.experiment_planning.dataset.validation.integrity_checker import verify_dataset_integrity
 from nnunetv2.paths import nnUNet_raw
@@ -13,7 +13,7 @@ from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
 def extract_fingerprint_dataset(dataset_id: int,
                                 fingerprint_extractor_class: Type[
                                     DatasetFingerprintExtractor] = DatasetFingerprintExtractor,
-                                num_processes: int = default_num_processes, check_dataset_integrity: bool = False,
+                                num_processes: int = DEFAULT_NUM_PROCESSES, check_dataset_integrity: bool = False,
                                 clean: bool = True, verbose: bool = True):
     """
     Returns the fingerprint as a dictionary (additionally to saving it)
@@ -29,7 +29,7 @@ def extract_fingerprint_dataset(dataset_id: int,
 
 
 def extract_fingerprints(dataset_ids: List[int], fingerprint_extractor_class_name: str = 'DatasetFingerprintExtractor',
-                         num_processes: int = default_num_processes, check_dataset_integrity: bool = False,
+                         num_processes: int = DEFAULT_NUM_PROCESSES, check_dataset_integrity: bool = False,
                          clean: bool = True, verbose: bool = True):
     """
     clean = False will not actually run this. This is just a switch for use with nnUNetv2_plan_and_preprocess where

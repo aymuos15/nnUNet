@@ -11,7 +11,7 @@ import shutil
 from blosc2 import Filter, Codec
 
 from batchgenerators.utilities.file_and_folder_operations import join, load_pickle, isfile, write_pickle, subfiles
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.training.dataloading.utils import unpack_dataset
 import math
 
@@ -56,7 +56,7 @@ class nnUNetBaseDataset(ABC):
 
     @staticmethod
     def unpack_dataset(folder: str, overwrite_existing: bool = False,
-                       num_processes: int = default_num_processes,
+                       num_processes: int = DEFAULT_NUM_PROCESSES,
                        verify: bool = True):
         pass
 
@@ -114,7 +114,7 @@ class nnUNetDatasetNumpy(nnUNetBaseDataset):
 
     @staticmethod
     def unpack_dataset(folder: str, overwrite_existing: bool = False,
-                       num_processes: int = default_num_processes,
+                       num_processes: int = DEFAULT_NUM_PROCESSES,
                        verify: bool = True):
         return unpack_dataset(folder, True, overwrite_existing, num_processes, verify)
 
@@ -201,7 +201,7 @@ class nnUNetDatasetBlosc2(nnUNetBaseDataset):
 
     @staticmethod
     def unpack_dataset(folder: str, overwrite_existing: bool = False,
-                       num_processes: int = default_num_processes,
+                       num_processes: int = DEFAULT_NUM_PROCESSES,
                        verify: bool = True):
         pass
 

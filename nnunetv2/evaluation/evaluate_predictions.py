@@ -6,7 +6,7 @@ from typing import Tuple, List, Union
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import subfiles, join, save_json, load_json, \
     isfile
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json, \
     determine_reader_writer_from_file_ending
@@ -123,7 +123,7 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
                               file_ending: str,
                               regions_or_labels: Union[List[int], List[Union[int, Tuple[int, ...]]]],
                               ignore_label: int = None,
-                              num_processes: int = default_num_processes,
+                              num_processes: int = DEFAULT_NUM_PROCESSES,
                               chill: bool = True) -> dict:
     """
     output_file must end with .json; can be None
@@ -176,7 +176,7 @@ def compute_metrics_on_folder(folder_ref: str, folder_pred: str, output_file: st
 
 def compute_metrics_on_folder2(folder_ref: str, folder_pred: str, dataset_json_file: str, plans_file: str,
                                output_file: str = None,
-                               num_processes: int = default_num_processes,
+                               num_processes: int = DEFAULT_NUM_PROCESSES,
                                chill: bool = False):
     dataset_json = load_json(dataset_json_file)
     # get file ending
@@ -198,7 +198,7 @@ def compute_metrics_on_folder2(folder_ref: str, folder_pred: str, dataset_json_f
 
 def compute_metrics_on_folder_simple(folder_ref: str, folder_pred: str, labels: Union[Tuple[int, ...], List[int]],
                                      output_file: str = None,
-                                     num_processes: int = default_num_processes,
+                                     num_processes: int = DEFAULT_NUM_PROCESSES,
                                      ignore_label: int = None,
                                      chill: bool = False):
     example_file = subfiles(folder_ref, join=True)[0]
@@ -223,8 +223,8 @@ def evaluate_folder_entry_point():
                         help='plans.json file')
     parser.add_argument('-o', type=str, required=False, default=None,
                         help='Output file. Optional. Default: pred_folder/summary.json')
-    parser.add_argument('-np', type=int, required=False, default=default_num_processes,
-                        help=f'number of processes used. Optional. Default: {default_num_processes}')
+    parser.add_argument('-np', type=int, required=False, default=DEFAULT_NUM_PROCESSES,
+                        help=f'number of processes used. Optional. Default: {DEFAULT_NUM_PROCESSES}')
     parser.add_argument('--chill', action='store_true', help='dont crash if folder_pred does not have all files that are present in folder_gt')
     args = parser.parse_args()
     compute_metrics_on_folder2(args.gt_folder, args.pred_folder, args.djfile, args.pfile, args.o, args.np, chill=args.chill)
@@ -241,8 +241,8 @@ def evaluate_simple_entry_point():
                         help='ignore label')
     parser.add_argument('-o', type=str, required=False, default=None,
                         help='Output file. Optional. Default: pred_folder/summary.json')
-    parser.add_argument('-np', type=int, required=False, default=default_num_processes,
-                        help=f'number of processes used. Optional. Default: {default_num_processes}')
+    parser.add_argument('-np', type=int, required=False, default=DEFAULT_NUM_PROCESSES,
+                        help=f'number of processes used. Optional. Default: {DEFAULT_NUM_PROCESSES}')
     parser.add_argument('--chill', action='store_true', help='dont crash if folder_pred does not have all files that are present in folder_gt')
 
     args = parser.parse_args()

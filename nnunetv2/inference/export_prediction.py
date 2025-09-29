@@ -5,7 +5,7 @@ import torch
 from acvl_utils.cropping_and_padding.bounding_boxes import insert_crop_into_image
 from batchgenerators.utilities.file_and_folder_operations import load_json, save_pickle
 
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.training.dataloading.nnunet_dataset import nnUNetDatasetBlosc2
 from nnunetv2.utilities.label_handling.label_handling import LabelManager
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
@@ -17,7 +17,7 @@ def convert_predicted_logits_to_segmentation_with_correct_shape(predicted_logits
                                                                 label_manager: LabelManager,
                                                                 properties_dict: dict,
                                                                 return_probabilities: bool = False,
-                                                                num_threads_torch: int = default_num_processes):
+                                                                num_threads_torch: int = DEFAULT_NUM_PROCESSES):
     old_threads = torch.get_num_threads()
     torch.set_num_threads(num_threads_torch)
 
@@ -76,7 +76,7 @@ def export_prediction_from_logits(predicted_array_or_file: Union[np.ndarray, tor
                                   plans_manager: PlansManager,
                                   dataset_json_dict_or_file: Union[dict, str], output_file_truncated: str,
                                   save_probabilities: bool = False,
-                                  num_threads_torch: int = default_num_processes):
+                                  num_threads_torch: int = DEFAULT_NUM_PROCESSES):
     # if isinstance(predicted_array_or_file, str):
     #     tmp = deepcopy(predicted_array_or_file)
     #     if predicted_array_or_file.endswith('.npy'):
@@ -112,7 +112,7 @@ def export_prediction_from_logits(predicted_array_or_file: Union[np.ndarray, tor
 
 def resample_and_save(predicted: Union[torch.Tensor, np.ndarray], target_shape: List[int], output_file: str,
                       plans_manager: PlansManager, configuration_manager: ConfigurationManager, properties_dict: dict,
-                      dataset_json_dict_or_file: Union[dict, str], num_threads_torch: int = default_num_processes,
+                      dataset_json_dict_or_file: Union[dict, str], num_threads_torch: int = DEFAULT_NUM_PROCESSES,
                       dataset_class=None) \
         -> None:
 

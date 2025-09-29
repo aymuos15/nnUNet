@@ -6,7 +6,7 @@ import torch
 from einops import rearrange
 from torch.nn import functional as F
 
-from nnunetv2.configuration import ANISO_THRESHOLD
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.imageio.simpleitk_reader_writer import SimpleITKIO
 from nnunetv2.preprocessing.resampling.default_resampling import determine_do_sep_z_and_axis
 
@@ -103,7 +103,7 @@ def resample_torch_fornnunet(
         device: torch.device = torch.device('cpu'),
         memefficient_seg_resampling: bool = False,
         force_separate_z: Union[bool, None] = None,
-        separate_z_anisotropy_threshold: float = ANISO_THRESHOLD,
+        separate_z_anisotropy_threshold: float = DEFAULT_ANISO_THRESHOLD,
         mode='linear',
         aniso_axis_mode='nearest-exact'
 ):

@@ -6,7 +6,7 @@ from typing import Union, List, Tuple
 from batchgenerators.utilities.file_and_folder_operations import (
     load_json, join, isdir, listdir, save_json
 )
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.ensembling.ensemble import ensemble_crossvalidations
 from nnunetv2.evaluation.accumulate_cv_results import accumulate_cv_results
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder, load_summary_json
@@ -82,7 +82,7 @@ def generate_inference_command(dataset_name_or_id: Union[int, str], configuratio
 def find_best_configuration(dataset_name_or_id,
                             allowed_trained_models: Union[List[dict], Tuple[dict, ...]] = default_trained_models,
                             allow_ensembling: bool = True,
-                            num_processes: int = default_num_processes,
+                            num_processes: int = DEFAULT_NUM_PROCESSES,
                             overwrite: bool = True,
                             folds: Union[List[int], Tuple[int, ...]] = (0, 1, 2, 3, 4),
                             strict: bool = False):
@@ -247,11 +247,11 @@ def print_inference_instructions(inference_info_dict: dict, instructions_file: s
             output_folder_str += f' {o}'
         output_ensemble = f"OUTPUT_FOLDER"
         _print_and_maybe_write_to_file('\nThe run ensembling with:\n')
-        _print_and_maybe_write_to_file(f"nnUNetv2_ensemble -i {output_folder_str} -o {output_ensemble} -np {default_num_processes}")
+        _print_and_maybe_write_to_file(f"nnUNetv2_ensemble -i {output_folder_str} -o {output_ensemble} -np {DEFAULT_NUM_PROCESSES}")
 
     _print_and_maybe_write_to_file("\n***Once inference is completed, run postprocessing like this:***\n")
     _print_and_maybe_write_to_file(f"nnUNetv2_apply_postprocessing -i OUTPUT_FOLDER -o OUTPUT_FOLDER_PP "
-          f"-pp_pkl_file {inference_info_dict['best_model_or_ensemble']['postprocessing_file']} -np {default_num_processes} "
+          f"-pp_pkl_file {inference_info_dict['best_model_or_ensemble']['postprocessing_file']} -np {DEFAULT_NUM_PROCESSES} "
           f"-plans_json {inference_info_dict['best_model_or_ensemble']['some_plans_file']}")
 
 
@@ -278,7 +278,7 @@ def find_best_configuration_entry_point():
                         help="List of configurations. Default: ['2d', '3d_fullres', '3d_lowres', '3d_cascade_fullres']")
     parser.add_argument('-tr', nargs='+', required=False, default=['nnUNetTrainer'],
                         help='List of trainers. Default: nnUNetTrainer')
-    parser.add_argument('-np', required=False, default=default_num_processes, type=int,
+    parser.add_argument('-np', required=False, default=DEFAULT_NUM_PROCESSES, type=int,
                         help='Number of processes to use for ensembling, postprocessing etc')
     parser.add_argument('-f', nargs='+', type=int, default=(0, 1, 2, 3, 4),
                         help='Folds to use. Default: 0 1 2 3 4')

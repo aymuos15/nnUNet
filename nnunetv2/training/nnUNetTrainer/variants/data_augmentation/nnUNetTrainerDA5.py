@@ -18,7 +18,7 @@ from batchgenerators.transforms.utility_transforms import OneOfTransform, Remove
 from batchgeneratorsv2.helpers.scalar_type import RandomScalar
 from torch import autocast
 
-from nnunetv2.configuration import ANISO_THRESHOLD
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.training.data_augmentation.compute_initial_patch_size import get_patch_size
 from nnunetv2.training.data_augmentation.custom_transforms.cascade_transforms import MoveSegAsOneHotToData, \
     ApplyRandomBinaryOperatorTransform, RemoveRandomConnectedComponentFromOneHotEncodingTransform
@@ -52,7 +52,7 @@ class nnUNetTrainerDA5(nnUNetTrainer):
         elif dim == 3:
             # todo this is not ideal. We could also have patch_size (64, 16, 128) in which case a full 180deg 2d rot would be bad
             # order of the axes is determined by spacing, not image size
-            do_dummy_2d_data_aug = (max(patch_size) / patch_size[0]) > ANISO_THRESHOLD
+            do_dummy_2d_data_aug = (max(patch_size) / patch_size[0]) > DEFAULT_ANISO_THRESHOLD
             if do_dummy_2d_data_aug:
                 # why do we rotate 180 deg here all the time? We should also restrict it
                 rotation_for_DA = (-180. / 360 * 2. * np.pi, 180. / 360 * 2. * np.pi)

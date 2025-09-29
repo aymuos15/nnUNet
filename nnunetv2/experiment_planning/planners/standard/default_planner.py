@@ -8,7 +8,7 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
 from dynamic_network_architectures.architectures.unet import PlainConvUNet
 from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 
-from nnunetv2.configuration import ANISO_THRESHOLD
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
@@ -45,7 +45,7 @@ class ExperimentPlanner(object):
 
         self.dataset_fingerprint = load_json(join(preprocessed_folder, 'dataset_fingerprint.json'))
 
-        self.anisotropy_threshold = ANISO_THRESHOLD
+        self.anisotropy_threshold = DEFAULT_ANISO_THRESHOLD
 
         self.UNet_base_num_features = 32
         self.UNet_class = PlainConvUNet

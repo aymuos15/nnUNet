@@ -18,7 +18,7 @@ from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 from batchgenerators.utilities.file_and_folder_operations import *
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
@@ -250,8 +250,8 @@ def entry_point_generate_overlay():
                                      "disregards spacing information!")
     parser.add_argument('-d', type=str, help="Dataset name or id", required=True)
     parser.add_argument('-o', type=str, help="output folder", required=True)
-    parser.add_argument('-np', type=int, default=default_num_processes, required=False,
-                        help=f"number of processes used. Default: {default_num_processes}")
+    parser.add_argument('-np', type=int, default=DEFAULT_NUM_PROCESSES, required=False,
+                        help=f"number of processes used. Default: {DEFAULT_NUM_PROCESSES}")
     parser.add_argument('-channel_idx', type=int, default=0, required=False,
                         help="channel index used (0 = _0000). Default: 0")
     parser.add_argument('--use_raw', action='store_true', required=False, help="if set then we use raw data. else "

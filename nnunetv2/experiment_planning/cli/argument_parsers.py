@@ -1,7 +1,7 @@
 import argparse
 from typing import Optional
 
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 
 
 def add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
@@ -16,9 +16,9 @@ def add_fingerprint_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('-fpe', type=str, required=False, default='DatasetFingerprintExtractor',
                         help='[OPTIONAL] Name of the Dataset Fingerprint Extractor class that should be used. Default is '
                              '\'DatasetFingerprintExtractor\'.')
-    parser.add_argument('-np', type=int, default=default_num_processes, required=False,
+    parser.add_argument('-np', type=int, default=DEFAULT_NUM_PROCESSES, required=False,
                         help=f'[OPTIONAL] Number of processes used for fingerprint extraction. '
-                             f'Default: {default_num_processes}')
+                             f'Default: {DEFAULT_NUM_PROCESSES}')
     parser.add_argument("--verify_dataset_integrity", required=False, default=False, action="store_true",
                         help="[RECOMMENDED] set this flag to check the dataset integrity. This is useful and should be done once for "
                              "each dataset!")

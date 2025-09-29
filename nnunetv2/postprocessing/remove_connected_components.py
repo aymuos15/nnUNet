@@ -7,7 +7,7 @@ import numpy as np
 from acvl_utils.morphology.morphology_helper import remove_all_but_largest_component
 from batchgenerators.utilities.file_and_folder_operations import load_json, subfiles, maybe_mkdir_p, join, isfile, \
     isdir, save_pickle, load_pickle, save_json
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.evaluation.accumulate_cv_results import accumulate_cv_results
 from nnunetv2.evaluation.evaluate_predictions import region_or_label_to_mask, compute_metrics_on_folder, \
     load_summary_json, label_or_region_to_key
@@ -53,7 +53,7 @@ def determine_postprocessing(folder_predictions: str,
                              folder_ref: str,
                              plans_file_or_dict: Union[str, dict],
                              dataset_json_file_or_dict: Union[str, dict],
-                             num_processes: int = default_num_processes,
+                             num_processes: int = DEFAULT_NUM_PROCESSES,
                              keep_postprocessed_files: bool = True):
     """
     Determines nnUNet postprocessing. Its output is a postprocessing.pkl file in folder_predictions which can be
@@ -304,8 +304,8 @@ def entry_point_determine_postprocessing_folder():
     parser.add_argument('-dataset_json', type=str, required=False, default=None,
                         help="dataset.json file to use. If not specified we will look for the dataset.json file in the "
                              "input folder (input_folder/dataset.json)")
-    parser.add_argument('-np', type=int, required=False, default=default_num_processes,
-                        help=f"number of processes to use. Default: {default_num_processes}")
+    parser.add_argument('-np', type=int, required=False, default=DEFAULT_NUM_PROCESSES,
+                        help=f"number of processes to use. Default: {DEFAULT_NUM_PROCESSES}")
     parser.add_argument('--remove_postprocessed', action='store_true', required=False,
                         help='set this is you don\'t want to keep the postprocessed files')
 
@@ -319,8 +319,8 @@ def entry_point_apply_postprocessing():
     parser.add_argument('-i', type=str, required=True, help='Input folder')
     parser.add_argument('-o', type=str, required=True, help='Output folder')
     parser.add_argument('-pp_pkl_file', type=str, required=True, help='postprocessing.pkl file')
-    parser.add_argument('-np', type=int, required=False, default=default_num_processes,
-                        help=f"number of processes to use. Default: {default_num_processes}")
+    parser.add_argument('-np', type=int, required=False, default=DEFAULT_NUM_PROCESSES,
+                        help=f"number of processes to use. Default: {DEFAULT_NUM_PROCESSES}")
     parser.add_argument('-plans_json', type=str, required=False, default=None,
                         help="plans file to use. If not specified we will look for the plans.json file in the "
                              "input folder (input_folder/plans.json)")

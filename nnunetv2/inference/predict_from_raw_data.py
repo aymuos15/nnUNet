@@ -20,7 +20,7 @@ from torch.nn.parallel import DistributedDataParallel
 from tqdm import tqdm
 
 import nnunetv2
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.inference.data_iterators import PreprocessAdapterFromNpy, preprocessing_iterator_fromfiles, \
     preprocessing_iterator_fromnpy
 from nnunetv2.inference.export_prediction import export_prediction_from_logits, \
@@ -209,8 +209,8 @@ class nnUNetPredictor(object):
                            output_folder_or_list_of_truncated_output_files: Union[str, None, List[str]],
                            save_probabilities: bool = False,
                            overwrite: bool = True,
-                           num_processes_preprocessing: int = default_num_processes,
-                           num_processes_segmentation_export: int = default_num_processes,
+                           num_processes_preprocessing: int = DEFAULT_NUM_PROCESSES,
+                           num_processes_segmentation_export: int = DEFAULT_NUM_PROCESSES,
                            folder_with_segs_from_prev_stage: str = None,
                            num_parts: int = 1,
                            part_id: int = 0):
@@ -339,7 +339,7 @@ class nnUNetPredictor(object):
                                         truncated_ofname: Union[str, List[str], None],
                                         num_processes: int = 3,
                                         save_probabilities: bool = False,
-                                        num_processes_segmentation_export: int = default_num_processes):
+                                        num_processes_segmentation_export: int = DEFAULT_NUM_PROCESSES):
         iterator = self.get_data_iterator_from_raw_npy_data(image_or_list_of_images,
                                                             segs_from_prev_stage_or_list_of_segs_from_prev_stage,
                                                             properties_or_list_of_properties,
@@ -350,7 +350,7 @@ class nnUNetPredictor(object):
     def predict_from_data_iterator(self,
                                    data_iterator,
                                    save_probabilities: bool = False,
-                                   num_processes_segmentation_export: int = default_num_processes):
+                                   num_processes_segmentation_export: int = DEFAULT_NUM_PROCESSES):
         """
         each element returned by data_iterator must be a dict with 'data', 'ofile' and 'data_properties' keys!
         If 'ofile' is None, the result will be returned instead of written to a file
@@ -477,7 +477,7 @@ class nnUNetPredictor(object):
         SEE convert_predicted_logits_to_segmentation_with_correct_shape
         """
         n_threads = torch.get_num_threads()
-        torch.set_num_threads(default_num_processes if default_num_processes < n_threads else n_threads)
+        torch.set_num_threads(DEFAULT_NUM_PROCESSES if DEFAULT_NUM_PROCESSES < n_threads else n_threads)
         prediction = None
 
         for params in self.list_of_parameters:

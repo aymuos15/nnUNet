@@ -7,7 +7,7 @@ import torch
 from torch import distributed as dist
 from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkdir_p
 
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder
 from nnunetv2.inference.export_prediction import export_prediction_from_logits, resample_and_save
 from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
@@ -57,7 +57,7 @@ def perform_actual_validation(trainer_instance, save_probabilities: bool = False
                                    trainer_instance.dataset_json, trainer_instance.__class__.__name__,
                                    trainer_instance.inference_allowed_mirroring_axes)
 
-    with multiprocessing.get_context("spawn").Pool(default_num_processes) as segmentation_export_pool:
+    with multiprocessing.get_context("spawn").Pool(DEFAULT_NUM_PROCESSES) as segmentation_export_pool:
         worker_list = [i for i in segmentation_export_pool._pool]
         validation_output_folder = join(trainer_instance.output_folder, 'validation')
         maybe_mkdir_p(validation_output_folder)
@@ -153,7 +153,7 @@ def perform_actual_validation(trainer_instance, save_probabilities: bool = False
                         resample_and_save, (
                             (prediction, target_shape, output_file_truncated, trainer_instance.plans_manager,
                              trainer_instance.configuration_manager, properties, trainer_instance.dataset_json,
-                             default_num_processes, dataset_class),
+                             DEFAULT_NUM_PROCESSES, dataset_class),
                         )
                     ))
 
@@ -176,8 +176,8 @@ def perform_actual_validation(trainer_instance, save_probabilities: bool = False
             trainer_instance.label_manager.foreground_regions if trainer_instance.label_manager.has_regions else
             trainer_instance.label_manager.foreground_labels,
             trainer_instance.label_manager.ignore_label, chill=True,
-            num_processes=default_num_processes * dist.get_world_size() if
-            trainer_instance.is_ddp else default_num_processes)
+            num_processes=DEFAULT_NUM_PROCESSES * dist.get_world_size() if
+            trainer_instance.is_ddp else DEFAULT_NUM_PROCESSES)
         trainer_instance.print_to_log_file("Validation complete", also_print_to_console=True)
         trainer_instance.print_to_log_file("Mean Validation Dice: ", (metrics['foreground_mean']["Dice"]),
                                            also_print_to_console=True)

@@ -7,7 +7,7 @@ from warnings import warn
 
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import isfile, subfiles
-from nnunetv2.configuration import default_num_processes
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 
 
 def _convert_to_npy(npz_file: str, unpack_segmentation: bool = True, overwrite_existing: bool = False,
@@ -56,7 +56,7 @@ def _convert_to_npy(npz_file: str, unpack_segmentation: bool = True, overwrite_e
 
 
 def unpack_dataset(folder: str, unpack_segmentation: bool = True, overwrite_existing: bool = False,
-                   num_processes: int = default_num_processes,
+                   num_processes: int = DEFAULT_NUM_PROCESSES,
                    verify: bool = False):
     """
     all npz files in this folder belong to the dataset, unpack them all

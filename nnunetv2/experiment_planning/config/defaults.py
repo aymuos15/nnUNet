@@ -2,11 +2,14 @@
 Default configuration values for experiment planning.
 """
 
-from nnunetv2.configuration import default_num_processes, ANISO_THRESHOLD
+import os
+from nnunetv2.utilities.default_n_proc_DA import get_allowed_n_proc_DA
 
 # Default number of processes for different operations
-DEFAULT_FINGERPRINT_PROCESSES = default_num_processes
+DEFAULT_NUM_PROCESSES = 8 if 'nnUNet_def_n_proc' not in os.environ else int(os.environ['nnUNet_def_n_proc'])
+DEFAULT_FINGERPRINT_PROCESSES = DEFAULT_NUM_PROCESSES
 DEFAULT_PREPROCESSING_PROCESSES = {"2d": 8, "3d_fullres": 4, "3d_lowres": 8}
+DEFAULT_DATA_AUGMENTATION_PROCESSES = get_allowed_n_proc_DA()
 
 # Default class names
 DEFAULT_FINGERPRINT_EXTRACTOR = 'DatasetFingerprintExtractor'
@@ -26,8 +29,9 @@ DEFAULT_BATCH_SIZE = 2
 DEFAULT_NUM_FOREGROUND_VOXELS_FOR_INTENSITYSTATS = 10e7
 DEFAULT_INTENSITY_SAMPLES_PER_CASE = 10000
 
-# Anisotropy threshold
-DEFAULT_ANISO_THRESHOLD = ANISO_THRESHOLD
+# Anisotropy threshold - determines when a sample is considered anisotropic
+# (3 means that the spacing in the low resolution axis must be 3x as large as the next largest spacing)
+DEFAULT_ANISO_THRESHOLD = 3
 
 # GPU memory defaults
 DEFAULT_GPU_MEMORY_TARGET_GB = 8

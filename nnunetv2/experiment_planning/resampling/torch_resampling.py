@@ -1,6 +1,6 @@
 from typing import Union, List, Tuple
 
-from nnunetv2.configuration import ANISO_THRESHOLD
+from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.experiment_planning.planners.standard.default_planner import ExperimentPlanner
 from nnunetv2.experiment_planning.planners.residual_unets.residual_encoder_unet_planners import \
     nnUNetPlannerResEncL
@@ -94,14 +94,14 @@ class nnUNetPlannerResEncL_torchres_sepz(nnUNetPlannerResEncL):
             "is_seg": False,
             'force_separate_z': None,
             'memefficient_seg_resampling': False,
-            'separate_z_anisotropy_threshold': ANISO_THRESHOLD
+            'separate_z_anisotropy_threshold': DEFAULT_ANISO_THRESHOLD
         }
         resampling_seg = resample_torch_fornnunet
         resampling_seg_kwargs = {
             "is_seg": True,
             'force_separate_z': None,
             'memefficient_seg_resampling': False,
-            'separate_z_anisotropy_threshold': ANISO_THRESHOLD
+            'separate_z_anisotropy_threshold': DEFAULT_ANISO_THRESHOLD
         }
         return resampling_data, resampling_data_kwargs, resampling_seg, resampling_seg_kwargs
 
@@ -119,7 +119,7 @@ class nnUNetPlannerResEncL_torchres_sepz(nnUNetPlannerResEncL):
             "is_seg": False,
             'force_separate_z': None,
             'memefficient_seg_resampling': False,
-            'separate_z_anisotropy_threshold': ANISO_THRESHOLD
+            'separate_z_anisotropy_threshold': DEFAULT_ANISO_THRESHOLD
         }
         return resampling_fn, resampling_fn_kwargs
 
