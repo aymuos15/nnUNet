@@ -16,7 +16,7 @@ from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape
 )
-from ..utils.sliding_window_prediction import compute_gaussian
+from .sliding_window_utils import compute_gaussian
 
 
 def predict_from_data_iterator(predictor,

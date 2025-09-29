@@ -1,13 +1,10 @@
 """Orchestration of prediction workflows for nnUNet predictor."""
 
 import os
-import inspect
-from copy import deepcopy
 from typing import Union, List
 
-from batchgenerators.utilities.file_and_folder_operations import maybe_mkdir_p, save_json, join
 from nnunetv2.configuration import default_num_processes
-from nnunetv2.utilities.json_export import recursive_fix_for_json_export
+from ..utils.config_saver import save_prediction_args_and_dataset
 
 
 def predict_from_files(predictor,
@@ -53,8 +50,7 @@ def predict_from_files(predictor,
         output_folder = None
 
     # Save configuration and arguments for reproducibility
-    if output_folder is not None:
-        _save_prediction_configuration(predictor, output_folder, locals())
+    save_prediction_args_and_dataset(predictor, output_folder, predict_from_files, locals())
 
     # Check cascade requirements
     if predictor.configuration_manager.previous_stage_name is not None:
@@ -79,9 +75,7 @@ def predict_from_files(predictor,
         return
 
     # Get data iterator
-    from ..preprocessing.iterators import get_data_iterator_from_lists_of_filenames
-    data_iterator = get_data_iterator_from_lists_of_filenames(
-        predictor,
+    data_iterator = predictor._internal_get_data_iterator_from_lists_of_filenames(
         list_of_lists_or_source_folder,
         seg_from_prev_stage_files,
         output_filename_truncated,
@@ -118,11 +112,9 @@ def predict_from_list_of_npy_arrays(predictor,
         List of predictions
     """
     import numpy as np
-    from ..preprocessing.iterators import get_data_iterator_from_raw_npy_data
 
     # Get data iterator for numpy arrays
-    data_iterator = get_data_iterator_from_raw_npy_data(
-        predictor,
+    data_iterator = predictor.get_data_iterator_from_raw_npy_data(
         image_or_list_of_images,
         segs_from_prev_stage_or_list_of_segs_from_prev_stage,
         properties_or_list_of_properties,
@@ -135,26 +127,3 @@ def predict_from_list_of_npy_arrays(predictor,
     return predict_from_data_iterator(predictor, data_iterator, save_probabilities, num_processes_segmentation_export)
 
 
-def _save_prediction_configuration(predictor, output_folder: str, local_vars: dict):
-    """
-    Save prediction configuration and arguments for reproducibility.
-
-    Args:
-        predictor: The nnUNetPredictor instance
-        output_folder: Output folder path
-        local_vars: Local variables from the calling function
-    """
-    # Store input arguments
-    my_init_kwargs = {}
-    for k in inspect.signature(predict_from_files).parameters.keys():
-        if k != 'predictor' and k in local_vars:
-            my_init_kwargs[k] = local_vars[k]
-
-    my_init_kwargs = deepcopy(my_init_kwargs)
-    recursive_fix_for_json_export(my_init_kwargs)
-    maybe_mkdir_p(output_folder)
-    save_json(my_init_kwargs, join(output_folder, 'predict_from_raw_data_args.json'))
-
-    # Save dataset and plans for potential postprocessing
-    save_json(predictor.dataset_json, join(output_folder, 'dataset.json'), sort_keys=False)
-    save_json(predictor.plans_manager.plans, join(output_folder, 'plans.json'), sort_keys=False)

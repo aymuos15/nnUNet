@@ -170,11 +170,18 @@ class nnUNetPredictor(object):
                                                            output_filenames_truncated: Union[List[str], None],
                                                            num_processes: int):
         """Get data iterator for preprocessing files."""
-        from .preprocessing.iterators import get_data_iterator_from_lists_of_filenames
-        return get_data_iterator_from_lists_of_filenames(self, input_list_of_lists,
-                                                        seg_from_prev_stage_files,
-                                                        output_filenames_truncated,
-                                                        num_processes)
+        from .preprocessing.data_iterators import preprocessing_iterator_fromfiles
+        return preprocessing_iterator_fromfiles(
+            input_list_of_lists,
+            seg_from_prev_stage_files,
+            output_filenames_truncated,
+            self.plans_manager,
+            self.dataset_json,
+            self.configuration_manager,
+            num_processes,
+            self.device.type == 'cuda',
+            self.verbose_preprocessing
+        )
 
     def get_data_iterator_from_raw_npy_data(self,
                                            image_or_list_of_images: Union[np.ndarray, List[np.ndarray]],
@@ -183,11 +190,36 @@ class nnUNetPredictor(object):
                                            truncated_ofname: Union[str, List[str], None],
                                            num_processes: int = 3):
         """Get data iterator for numpy arrays."""
-        from .preprocessing.iterators import get_data_iterator_from_raw_npy_data
-        return get_data_iterator_from_raw_npy_data(self, image_or_list_of_images,
-                                                  segs_from_prev_stage_or_list_of_segs_from_prev_stage,
-                                                  properties_or_list_of_properties,
-                                                  truncated_ofname, num_processes)
+        from .preprocessing.data_iterators import preprocessing_iterator_fromnpy
+
+        # Ensure all inputs are lists
+        list_of_images = [image_or_list_of_images] if not isinstance(image_or_list_of_images, list) else \
+            image_or_list_of_images
+
+        if isinstance(segs_from_prev_stage_or_list_of_segs_from_prev_stage, np.ndarray):
+            segs_from_prev_stage_or_list_of_segs_from_prev_stage = [
+                segs_from_prev_stage_or_list_of_segs_from_prev_stage]
+
+        if isinstance(truncated_ofname, str):
+            truncated_ofname = [truncated_ofname]
+
+        if isinstance(properties_or_list_of_properties, dict):
+            properties_or_list_of_properties = [properties_or_list_of_properties]
+
+        num_processes = min(num_processes, len(list_of_images))
+
+        return preprocessing_iterator_fromnpy(
+            list_of_images,
+            segs_from_prev_stage_or_list_of_segs_from_prev_stage,
+            properties_or_list_of_properties,
+            truncated_ofname,
+            self.plans_manager,
+            self.dataset_json,
+            self.configuration_manager,
+            num_processes,
+            self.device.type == 'cuda',
+            self.verbose_preprocessing
+        )
 
     def predict_from_list_of_npy_arrays(self,
                                        image_or_list_of_images: Union[np.ndarray, List[np.ndarray]],
@@ -259,33 +291,4 @@ class nnUNetPredictor(object):
         from .prediction.logits import predict_logits_from_preprocessed_data
         return predict_logits_from_preprocessed_data(self, data)
 
-    def _internal_get_sliding_window_slicers(self, image_size: Tuple[int, ...]):
-        """Generate slicers for sliding window prediction."""
-        from .prediction.sliding_window import get_sliding_window_slicers
-        return get_sliding_window_slicers(self, image_size)
 
-    @torch.inference_mode()
-    def _internal_maybe_mirror_and_predict(self, x: torch.Tensor) -> torch.Tensor:
-        """Perform prediction with optional test-time mirroring."""
-        from .prediction.mirroring import maybe_mirror_and_predict
-        return maybe_mirror_and_predict(self, x)
-
-    @torch.inference_mode()
-    def _internal_predict_sliding_window_return_logits(self,
-                                                      data: torch.Tensor,
-                                                      slicers,
-                                                      do_on_device: bool = True):
-        """Internal method for sliding window prediction."""
-        from .prediction.sliding_window import _internal_predict_sliding_window_return_logits
-        return _internal_predict_sliding_window_return_logits(self, data, slicers, do_on_device)
-
-    @torch.inference_mode()
-    def predict_sliding_window_return_logits(self, input_image: torch.Tensor) -> torch.Tensor:
-        """
-        Predict using sliding window and return logits.
-
-        Returns:
-            Predicted logits tensor
-        """
-        from .prediction.sliding_window import predict_sliding_window_return_logits
-        return predict_sliding_window_return_logits(self, input_image)

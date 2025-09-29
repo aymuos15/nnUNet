@@ -1,20 +1,17 @@
 """Sequential (non-parallel) prediction for nnUNet predictor."""
 
 import os
-import inspect
-from copy import deepcopy
 from typing import Union, List
 
 import torch
-from batchgenerators.utilities.file_and_folder_operations import save_json, join
 from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
 from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape
 )
-from ..utils.sliding_window_prediction import compute_gaussian
+from .sliding_window_utils import compute_gaussian
+from ..utils.config_saver import save_prediction_args_and_dataset
 from nnunetv2.utilities.helpers import empty_cache
-from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 
 
 def predict_from_files_sequential(predictor,
@@ -48,8 +45,7 @@ def predict_from_files_sequential(predictor,
         output_folder = None
 
     # Save configuration for reproducibility
-    if output_folder is not None:
-        _save_sequential_configuration(predictor, output_folder, locals())
+    save_prediction_args_and_dataset(predictor, output_folder, predict_from_files_sequential, locals())
 
     # Check cascade requirements
     if predictor.configuration_manager.previous_stage_name is not None:
@@ -133,24 +129,3 @@ def predict_from_files_sequential(predictor,
     return ret
 
 
-def _save_sequential_configuration(predictor, output_folder: str, local_vars: dict):
-    """
-    Save sequential prediction configuration.
-
-    Args:
-        predictor: The nnUNetPredictor instance
-        output_folder: Output folder path
-        local_vars: Local variables from the calling function
-    """
-    my_init_kwargs = {}
-    for k in inspect.signature(predict_from_files_sequential).parameters.keys():
-        if k != 'predictor' and k in local_vars:
-            my_init_kwargs[k] = local_vars[k]
-
-    my_init_kwargs = deepcopy(my_init_kwargs)
-    recursive_fix_for_json_export(my_init_kwargs)
-    save_json(my_init_kwargs, join(output_folder, 'predict_from_raw_data_args.json'))
-
-    # Save dataset and plans for postprocessing
-    save_json(predictor.dataset_json, join(output_folder, 'dataset.json'), sort_keys=False)
-    save_json(predictor.plans_manager.plans, join(output_folder, 'plans.json'), sort_keys=False)

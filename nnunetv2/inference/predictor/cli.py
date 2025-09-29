@@ -16,6 +16,36 @@ def _getDefaultValue(env: str, dtype: type, default: any) -> any:
     return val
 
 
+def _print_citation():
+    """Print nnU-Net citation."""
+    print(
+        "\n#######################################################################\nPlease cite the following paper "
+        "when using nnU-Net:\n"
+        "Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). "
+        "nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. "
+        "Nature methods, 18(2), 203-211.\n#######################################################################\n")
+
+
+def _setup_device(device_name: str) -> torch.device:
+    """Setup device for inference with appropriate thread configuration."""
+    assert device_name in ['cpu', 'cuda', 'mps'], \
+        f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {device_name}.'
+
+    if device_name == 'cpu':
+        # let's allow torch to use hella threads
+        torch.set_num_threads(multiprocessing.cpu_count())
+        device = torch.device('cpu')
+    elif device_name == 'cuda':
+        # multithreading in torch doesn't help nnU-Net if run on GPU
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        device = torch.device('cuda')
+    else:
+        device = torch.device('mps')
+
+    return device
+
+
 def predict_entry_point_modelfolder():
     """Entry point for prediction when specifying model folder directly."""
     import argparse
@@ -68,12 +98,7 @@ def predict_entry_point_modelfolder():
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
 
-    print(
-        "\n#######################################################################\nPlease cite the following paper "
-        "when using nnU-Net:\n"
-        "Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). "
-        "nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. "
-        "Nature methods, 18(2), 203-211.\n#######################################################################\n")
+    _print_citation()
 
     args = parser.parse_args()
     args.f = [i if i == 'all' else int(i) for i in args.f]
@@ -81,19 +106,7 @@ def predict_entry_point_modelfolder():
     if not isdir(args.o):
         maybe_mkdir_p(args.o)
 
-    assert args.device in ['cpu', 'cuda',
-                           'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {args.device}.'
-    if args.device == 'cpu':
-        # let's allow torch to use hella threads
-        torch.set_num_threads(multiprocessing.cpu_count())
-        device = torch.device('cpu')
-    elif args.device == 'cuda':
-        # multithreading in torch doesn't help nnU-Net if run on GPU
-        torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
-        device = torch.device('cuda')
-    else:
-        device = torch.device('mps')
+    device = _setup_device(args.device)
 
     predictor = nnUNetPredictor(tile_step_size=args.step_size,
                                 use_gaussian=True,
@@ -179,12 +192,7 @@ def predict_entry_point():
                         help='Set this flag to disable progress bar. Recommended for HPC environments (non interactive '
                              'jobs)')
 
-    print(
-        "\n#######################################################################\nPlease cite the following paper "
-        "when using nnU-Net:\n"
-        "Isensee, F., Jaeger, P. F., Kohl, S. A., Petersen, J., & Maier-Hein, K. H. (2021). "
-        "nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. "
-        "Nature methods, 18(2), 203-211.\n#######################################################################\n")
+    _print_citation()
 
     args = parser.parse_args()
     args.f = [i if i == 'all' else int(i) for i in args.f]
@@ -197,19 +205,7 @@ def predict_entry_point():
     # slightly passive aggressive haha
     assert args.part_id < args.num_parts, 'Do you even read the documentation? See nnUNetv2_predict -h.'
 
-    assert args.device in ['cpu', 'cuda',
-                           'mps'], f'-device must be either cpu, mps or cuda. Other devices are not tested/supported. Got: {args.device}.'
-    if args.device == 'cpu':
-        # let's allow torch to use hella threads
-        torch.set_num_threads(multiprocessing.cpu_count())
-        device = torch.device('cpu')
-    elif args.device == 'cuda':
-        # multithreading in torch doesn't help nnU-Net if run on GPU
-        torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
-        device = torch.device('cuda')
-    else:
-        device = torch.device('mps')
+    device = _setup_device(args.device)
 
     predictor = nnUNetPredictor(tile_step_size=args.step_size,
                                 use_gaussian=True,
