@@ -12,7 +12,7 @@ from nnunetv2.evaluation.accumulate_cv_results import accumulate_cv_results
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder, load_summary_json
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_raw, nnUNet_results
 from nnunetv2.postprocessing.remove_connected_components import determine_postprocessing
-from nnunetv2.utilities.dataset_io.file_path_utilities import maybe_convert_to_dataset_name, get_output_folder, \
+from nnunetv2.data.dataset_io.file_path_utilities import maybe_convert_to_dataset_name, get_output_folder, \
     convert_identifier_to_trainer_plans_config, get_ensemble_name, folds_tuple_to_string
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
 

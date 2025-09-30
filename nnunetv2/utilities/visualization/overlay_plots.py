@@ -22,10 +22,10 @@ from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
-from nnunetv2.training.data.dataset import infer_dataset_class, nnUNetBaseDataset
-from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
+from nnunetv2.data.dataset import infer_dataset_class, nnUNetBaseDataset
+from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 from nnunetv2.experiment_planning.planning.plans_handler import ConfigurationManager
-from nnunetv2.utilities.dataset_io.utils import get_identifiers_from_splitted_dataset_folder, \
+from nnunetv2.data.dataset_io.utils import get_identifiers_from_splitted_dataset_folder, \
     get_filenames_of_train_images_and_targets
 
 color_cycle = (

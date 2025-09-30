@@ -13,7 +13,7 @@ from nnunetv2.evaluation.evaluate_predictions import region_or_label_to_mask, co
     load_summary_json, label_or_region_to_key
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
 from nnunetv2.paths import nnUNet_raw
-from nnunetv2.utilities.dataset_io.file_path_utilities import folds_tuple_to_string
+from nnunetv2.data.dataset_io.file_path_utilities import folds_tuple_to_string
 from nnunetv2.utilities.core.json_export import recursive_fix_for_json_export
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
 

@@ -1,7 +1,7 @@
 """Data augmentation configuration presets."""
 
 from nnunetv2.training.configs import TrainerConfig, register_config
-from nnunetv2.training.data.transform_builders import get_validation_transforms
+from nnunetv2.data.transform_builders import get_validation_transforms
 
 
 def no_da_transforms_builder(patch_size, rotation_for_DA, deep_supervision_scales, mirror_axes,

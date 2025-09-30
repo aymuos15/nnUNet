@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
-from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
-from nnunetv2.utilities.dataset_io.utils import get_filenames_of_train_images_and_targets
+from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
+from nnunetv2.data.dataset_io.utils import get_filenames_of_train_images_and_targets
 from .analyzers import analyze_case, aggregate_case_results, create_fingerprint_dict
 from .collectors import calculate_global_intensity_statistics
 

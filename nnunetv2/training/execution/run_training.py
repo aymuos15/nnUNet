@@ -11,7 +11,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, isfile, l
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.training.execution.load_pretrained_weights import load_pretrained_weights
 from nnunetv2.training.trainer.main import nnUNetTrainer
-from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
+from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 from nnunetv2.training.configs import get_config
 from torch.backends import cudnn
 

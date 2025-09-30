@@ -327,7 +327,7 @@ class PlansManager(object):
 
 if __name__ == '__main__':
     from nnunetv2.paths import nnUNet_preprocessed
-    from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
+    from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 
     plans = load_json(join(nnUNet_preprocessed, maybe_convert_to_dataset_name(3), 'nnUNetPlans.json'))
     # build new configuration that inherits from 3d_fullres

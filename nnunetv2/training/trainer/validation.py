@@ -23,9 +23,9 @@ from nnunetv2.inference.predictor.postprocessing.export_prediction import export
 from nnunetv2.inference.predictor.main import nnUNetPredictor
 from nnunetv2.inference.predictor.prediction.sliding_window_utils import compute_gaussian
 from nnunetv2.paths import nnUNet_preprocessed
-from nnunetv2.training.data.dataset import infer_dataset_class
+from nnunetv2.data.dataset import infer_dataset_class
 from nnunetv2.metrics.implementations.dice import get_tp_fp_fn_tn
-from nnunetv2.utilities.dataset_io.file_path_utilities import check_workers_alive_and_busy
+from nnunetv2.data.dataset_io.file_path_utilities import check_workers_alive_and_busy
 from nnunetv2.experiment_planning.planning.label_handling import convert_labelmap_to_one_hot
 from nnunetv2.utilities.core.helpers import dummy_context
 

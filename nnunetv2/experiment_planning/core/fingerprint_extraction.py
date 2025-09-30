@@ -6,7 +6,7 @@ from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.experiment_planning.dataset.fingerprint.extractor import DatasetFingerprintExtractor
 from nnunetv2.experiment_planning.dataset.validation.integrity_checker import verify_dataset_integrity
 from nnunetv2.paths import nnUNet_raw
-from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import convert_id_to_dataset_name
+from nnunetv2.data.dataset_io.dataset_name_id_conversion import convert_id_to_dataset_name
 from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
 
 

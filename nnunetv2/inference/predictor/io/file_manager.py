@@ -3,7 +3,7 @@
 import os
 from typing import Union, List, Tuple, Optional
 from batchgenerators.utilities.file_and_folder_operations import join, isfile
-from nnunetv2.utilities.dataset_io.utils import create_lists_from_splitted_dataset_folder
+from nnunetv2.data.dataset_io.utils import create_lists_from_splitted_dataset_folder
 
 
 def manage_input_and_output_lists(predictor,

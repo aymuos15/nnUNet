@@ -13,8 +13,8 @@ from .lifecycle import (setup_output_folders, setup_cascaded_folders, _set_batch
 from nnunetv2.architecture import set_deep_supervision_enabled, _do_i_compile
 from .training import configure_optimizers, train_step
 from .validation import perform_actual_validation, validation_step
-from nnunetv2.training.data.dataset import do_split, get_tr_and_val_datasets
-from nnunetv2.training.data.loader import get_dataloaders
+from nnunetv2.data.dataset import do_split, get_tr_and_val_datasets
+from nnunetv2.data.loader import get_dataloaders
 from nnunetv2.training.configs import TrainerConfig
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.logging.console import nnUNetTrainerLogging
@@ -22,7 +22,7 @@ from nnunetv2.training.losses.builder import _build_loss, _get_deep_supervision_
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
 from nnunetv2.experiment_planning.planning.label_handling import determine_num_input_channels
 from nnunetv2.architecture import build_network_architecture
-from nnunetv2.training.data.dataset import infer_dataset_class
+from nnunetv2.data.dataset import infer_dataset_class
 
 
 class nnUNetTrainer(object):

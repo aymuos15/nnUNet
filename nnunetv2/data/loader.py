@@ -12,12 +12,12 @@ from batchgenerators.utilities.file_and_folder_operations import join, load_json
 from threadpoolctl import threadpool_limits
 
 from nnunetv2.paths import nnUNet_preprocessed
-from nnunetv2.training.data.dataset import nnUNetBaseDataset, nnUNetDatasetBlosc2, infer_dataset_class
+from nnunetv2.data.dataset import nnUNetBaseDataset, nnUNetDatasetBlosc2, infer_dataset_class
 from nnunetv2.experiment_planning.planning.label_handling import LabelManager
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
 from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
-from nnunetv2.training.data.dataset import get_tr_and_val_datasets
-from nnunetv2.training.data.transform_builders import get_training_transforms, get_validation_transforms
+from nnunetv2.data.dataset import get_tr_and_val_datasets
+from nnunetv2.data.transform_builders import get_training_transforms, get_validation_transforms
 from nnunetv2.training.trainer.lifecycle import configure_rotation_dummyDA_mirroring_and_inital_patch_size
 from acvl_utils.cropping_and_padding.bounding_boxes import crop_and_pad_nd
 

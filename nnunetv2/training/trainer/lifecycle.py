@@ -23,7 +23,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, save_json
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_results
-from nnunetv2.training.data.transforms.compute_initial_patch_size import get_patch_size
+from nnunetv2.data.transforms.compute_initial_patch_size import get_patch_size
 from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
 from nnunetv2.utilities.core.helpers import empty_cache
 
@@ -237,7 +237,7 @@ def on_train_start(trainer_instance):
 
     # dataloaders must be instantiated here (instead of __init__) because they need access to the training data
     # which may not be present when doing inference
-    from nnunetv2.training.data.loader import get_dataloaders  # local import to avoid circular dependency
+    from nnunetv2.data.loader import get_dataloaders  # local import to avoid circular dependency
     trainer_instance.dataloader_train, trainer_instance.dataloader_val = get_dataloaders(trainer_instance)
 
     ensure_output_folder_exists(trainer_instance)
