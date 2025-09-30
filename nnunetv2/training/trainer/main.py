@@ -17,7 +17,7 @@ from nnunetv2.training.data.dataset import do_split, get_tr_and_val_datasets
 from nnunetv2.training.data.loader import get_dataloaders
 from nnunetv2.training.configs import TrainerConfig
 from nnunetv2.training.logging.metrics import nnUNetLogger
-from nnunetv2.training.logging.console import print_to_log_file, print_plans, _save_debug_information
+from nnunetv2.training.logging.console import nnUNetTrainerLogging
 from nnunetv2.training.losses.builder import _build_loss, _get_deep_supervision_scales
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
 from nnunetv2.experiment_planning.planning.label_handling import determine_num_input_channels
@@ -128,6 +128,17 @@ class nnUNetTrainer(object):
                                        timestamp.hour, timestamp.minute, timestamp.second))
         self.logger = nnUNetLogger()
 
+        # Console/file logger (create once, reuse forever)
+        self._console_logger = nnUNetTrainerLogging(
+            log_file=self.log_file,
+            output_folder=self.output_folder,
+            local_rank=self.local_rank,
+            plans_manager=self.plans_manager,
+            configuration_manager=self.configuration_manager,
+            configuration_name=self.configuration_name,
+            device=self.device
+        )
+
         # Training state
         self.dataloader_train = self.dataloader_val = None
         self._best_ema = None
@@ -190,7 +201,8 @@ class nnUNetTrainer(object):
                               "That should not happen.")
 
     def _save_debug_information(self):
-        return _save_debug_information(self)
+        """Save debug information to JSON file."""
+        return self._console_logger._save_debug_information(self)
 
     def _get_deep_supervision_scales(self):
         return _get_deep_supervision_scales(self)
@@ -199,10 +211,16 @@ class nnUNetTrainer(object):
         return _build_loss(self)
 
     def print_to_log_file(self, *args, also_print_to_console=True, add_timestamp=True):
-        return print_to_log_file(self, *args, also_print_to_console=also_print_to_console, add_timestamp=add_timestamp)
+        """Print message to log file and optionally to console."""
+        return self._console_logger.print_to_log_file(
+            *args, 
+            also_print_to_console=also_print_to_console, 
+            add_timestamp=add_timestamp
+        )
 
     def print_plans(self):
-        return print_plans(self)
+        """Print training plans and configuration to log file."""
+        return self._console_logger.print_plans()
 
     def configure_optimizers(self):
         """Configure optimizer and learning rate scheduler."""

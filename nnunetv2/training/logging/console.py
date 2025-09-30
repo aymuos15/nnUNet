@@ -18,48 +18,6 @@ import torch
 from batchgenerators.utilities.file_and_folder_operations import join, save_json
 
 
-def print_to_log_file(trainer_instance, *args, also_print_to_console=True, add_timestamp=True):
-    """Wrapper function for print_to_log_file."""
-    logger = create_logging_instance(
-        trainer_instance.log_file,
-        trainer_instance.output_folder,
-        trainer_instance.local_rank,
-        trainer_instance.plans_manager,
-        trainer_instance.configuration_manager,
-        trainer_instance.configuration_name,
-        trainer_instance.device
-    )
-    return logger.print_to_log_file(*args, also_print_to_console=also_print_to_console, add_timestamp=add_timestamp)
-
-
-def print_plans(trainer_instance):
-    """Wrapper function for print_plans."""
-    logger = create_logging_instance(
-        trainer_instance.log_file,
-        trainer_instance.output_folder,
-        trainer_instance.local_rank,
-        trainer_instance.plans_manager,
-        trainer_instance.configuration_manager,
-        trainer_instance.configuration_name,
-        trainer_instance.device
-    )
-    return logger.print_plans()
-
-
-def _save_debug_information(trainer_instance):
-    """Wrapper function for _save_debug_information."""
-    logger = create_logging_instance(
-        trainer_instance.log_file,
-        trainer_instance.output_folder,
-        trainer_instance.local_rank,
-        trainer_instance.plans_manager,
-        trainer_instance.configuration_manager,
-        trainer_instance.configuration_name,
-        trainer_instance.device
-    )
-    return logger._save_debug_information(trainer_instance)
-
-
 class nnUNetTrainerLogging:
     """
     Extracted logging components from nnUNetTrainer class.
@@ -189,31 +147,3 @@ class nnUNetTrainerLogging:
             dct['cudnn_version'] = cudnn_version
 
             save_json(dct, join(self.output_folder, "debug.json"))
-
-
-def create_logging_instance(log_file, output_folder, local_rank=0, plans_manager=None,
-                          configuration_manager=None, configuration_name=None, device=None):
-    """
-    Factory function to create a logging instance.
-
-    Args:
-        log_file: Path to the log file
-        output_folder: Directory for output files
-        local_rank: Local rank for distributed training (default: 0)
-        plans_manager: Plans manager instance
-        configuration_manager: Configuration manager instance
-        configuration_name: Name of the configuration
-        device: Training device
-
-    Returns:
-        nnUNetTrainerLogging instance
-    """
-    return nnUNetTrainerLogging(
-        log_file=log_file,
-        output_folder=output_folder,
-        local_rank=local_rank,
-        plans_manager=plans_manager,
-        configuration_manager=configuration_manager,
-        configuration_name=configuration_name,
-        device=device
-    )
