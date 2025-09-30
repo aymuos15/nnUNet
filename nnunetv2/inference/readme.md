@@ -50,7 +50,7 @@ Example:
     from nnunetv2.paths import nnUNet_results, nnUNet_raw
     import torch
     from batchgenerators.utilities.file_and_folder_operations import join
-    from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
+    from nnunetv2.inference.predictor.main import nnUNetPredictor
     
     # instantiate the nnUNetPredictor
     predictor = nnUNetPredictor(

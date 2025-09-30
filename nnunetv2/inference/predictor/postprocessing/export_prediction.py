@@ -6,7 +6,7 @@ from acvl_utils.cropping_and_padding.bounding_boxes import insert_crop_into_imag
 from batchgenerators.utilities.file_and_folder_operations import load_json, save_pickle
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
-from nnunetv2.training.dataloading.nnunet_dataset import nnUNetDatasetBlosc2
+from nnunetv2.training.data.dataset import nnUNetDatasetBlosc2
 from nnunetv2.utilities.planning.label_handling import LabelManager
 from nnunetv2.utilities.planning.plans_handler import PlansManager, ConfigurationManager
 

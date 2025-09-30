@@ -54,12 +54,14 @@ def initialize_from_trained_model_folder(predictor,
 
     # Restore network
     num_input_channels = determine_num_input_channels(plans_manager, configuration_manager, dataset_json)
-    trainer_class = recursive_find_python_class(join(nnunetv2.__path__[0], "training", "nnUNetTrainer"),
-                                                trainer_name, 'nnunetv2.training.nnUNetTrainer')
+    # After refactoring, trainer classes are in nnunetv2/training/trainer/ directory
+    # but we maintain backward compatibility by also checking nnunetv2/training/nnUNetTrainer.py
+    trainer_class = recursive_find_python_class(join(nnunetv2.__path__[0], "training"),
+                                                trainer_name, 'nnunetv2.training')
     if trainer_class is None:
-        raise RuntimeError(f'Unable to locate trainer class {trainer_name} in nnunetv2.training.nnUNetTrainer. '
+        raise RuntimeError(f'Unable to locate trainer class {trainer_name} in nnunetv2.training. '
                           f'Please place it there (or in a submodule) and make sure it can be imported with '
-                          f'"from nnunetv2.training.nnUNetTrainer import {trainer_name}"')
+                          f'"from nnunetv2.training import {trainer_name}"')
 
     network = trainer_class.build_network_architecture(
         configuration_manager.network_arch_class_name,

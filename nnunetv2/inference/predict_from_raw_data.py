@@ -1,15 +1,8 @@
 """
-Backward compatibility layer for nnUNet predictor.
-
-This module maintains backward compatibility for existing code that imports from predict_from_raw_data.py.
-The actual implementation has been refactored into a modular architecture under nnunetv2.inference.predictor.
+Backward compatibility module.
+This module redirects to the new location of predict_entry_point.
 """
 
-# Import the refactored predictor class
-from .predictor.main import nnUNetPredictor
+from nnunetv2.inference.predictor.cli import predict_entry_point, predict_entry_point_modelfolder
 
-# Import CLI functions for backward compatibility
-from .predictor.cli import predict_entry_point_modelfolder, predict_entry_point, _getDefaultValue
-
-# Re-export for backward compatibility
-__all__ = ['nnUNetPredictor', 'predict_entry_point_modelfolder', 'predict_entry_point', '_getDefaultValue']
+__all__ = ['predict_entry_point', 'predict_entry_point_modelfolder']
