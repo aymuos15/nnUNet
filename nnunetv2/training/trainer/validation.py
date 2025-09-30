@@ -19,7 +19,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkd
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder
-from nnunetv2.inference.export_prediction import export_prediction_from_logits, resample_and_save
+from nnunetv2.inference.predictor.postprocessing.export_prediction import export_prediction_from_logits, resample_and_save
 from nnunetv2.inference.predictor.main import nnUNetPredictor
 from nnunetv2.inference.predictor.prediction.sliding_window_utils import compute_gaussian
 from nnunetv2.paths import nnUNet_preprocessed
