@@ -24,7 +24,7 @@ from nnunetv2.inference.predictor.main import nnUNetPredictor
 from nnunetv2.inference.predictor.prediction.sliding_window_utils import compute_gaussian
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.training.data.dataset import infer_dataset_class
-from nnunetv2.training.losses.dice import get_tp_fp_fn_tn
+from nnunetv2.training.losses.implementations.dice import get_tp_fp_fn_tn
 from nnunetv2.utilities.dataset_io.file_path_utilities import check_workers_alive_and_busy
 from nnunetv2.utilities.planning.label_handling import convert_labelmap_to_one_hot
 from nnunetv2.utilities.core.helpers import dummy_context
@@ -122,7 +122,7 @@ def perform_actual_validation(trainer_instance, save_probabilities: bool = False
         trainer_instance: The nnUNetTrainer instance
         save_probabilities: Whether to save prediction probabilities
     """
-    from .lifecycle import set_deep_supervision_enabled, _do_i_compile
+    from .network import set_deep_supervision_enabled, _do_i_compile
 
     set_deep_supervision_enabled(trainer_instance, False)
     trainer_instance.network.eval()
