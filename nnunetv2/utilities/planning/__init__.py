@@ -8,6 +8,7 @@ from .label_handling import (
 )
 from .plans_handler import ConfigurationManager, PlansManager
 from .get_network_from_plans import get_network_from_plans
+from .network_building import build_network_architecture
 
 __all__ = [
     "LabelManager",
@@ -17,4 +18,5 @@ __all__ = [
     "ConfigurationManager",
     "PlansManager",
     "get_network_from_plans",
+    "build_network_architecture",
 ]

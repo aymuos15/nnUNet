@@ -29,7 +29,7 @@ from nnunetv2.utilities.core.helpers import empty_cache
 
 from .training import train_step, on_train_epoch_end, on_validation_epoch_end
 from .validation import validation_step
-from .network import set_deep_supervision_enabled, plot_network_architecture
+from .network_config import set_deep_supervision_enabled, plot_network_architecture
 # get_dataloaders imported locally within on_train_start to avoid circular import
 
 

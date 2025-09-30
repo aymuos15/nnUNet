@@ -10,7 +10,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkd
 from .checkpointing import save_checkpoint, load_checkpoint
 from .lifecycle import (setup_output_folders, setup_cascaded_folders, _set_batch_size_and_oversample,
                         run_training)
-from .network import set_deep_supervision_enabled, build_network_architecture, _do_i_compile
+from .network_config import set_deep_supervision_enabled, _do_i_compile
 from .training import configure_optimizers, train_step
 from .validation import perform_actual_validation, validation_step
 from nnunetv2.training.data.dataset import do_split, get_tr_and_val_datasets
@@ -21,6 +21,7 @@ from nnunetv2.training.logging.console import print_to_log_file, print_plans, _s
 from nnunetv2.training.losses.builder import _build_loss, _get_deep_supervision_scales
 from nnunetv2.utilities.planning.plans_handler import PlansManager
 from nnunetv2.utilities.planning.label_handling import determine_num_input_channels
+from nnunetv2.utilities.planning.network_building import build_network_architecture
 from nnunetv2.training.data.dataset import infer_dataset_class
 
 
