@@ -24,7 +24,7 @@ from dynamic_network_architectures.building_blocks.helper import convert_dim_to_
 if TYPE_CHECKING:
     from nnunetv2.utilities.label_handling.label_handling import LabelManager
     from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
-    from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
+    from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
     from nnunetv2.experiment_planning.experiment_planners.default_experiment_planner import ExperimentPlanner
 
 
