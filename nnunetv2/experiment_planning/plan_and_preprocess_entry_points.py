@@ -1,5 +1,5 @@
 # Import new modular entry points
-from nnunetv2.experiment_planning.cli.entrypoints import (
+from nnunetv2.experiment_planning.cli.entry_points import (
     extract_fingerprint_entry as _extract_fingerprint_entry,
     plan_experiment_entry as _plan_experiment_entry,
     preprocess_entry as _preprocess_entry,
