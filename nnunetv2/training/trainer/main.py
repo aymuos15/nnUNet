@@ -16,7 +16,7 @@ from .validation import perform_actual_validation, validation_step
 from nnunetv2.training.data.dataset import do_split, get_tr_and_val_datasets
 from nnunetv2.training.data.loader import get_dataloaders
 from nnunetv2.training.configs import TrainerConfig
-from nnunetv2.training.logging.metrics import nnUNetLogger
+from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
 from nnunetv2.training.logging.console import nnUNetTrainerLogging
 from nnunetv2.training.losses.builder import _build_loss, _get_deep_supervision_scales
 from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
