@@ -5,7 +5,7 @@ import torch
 from copy import deepcopy
 from typing import Optional
 
-from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
+from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
 
 
 def predict_single_npy_array(predictor,

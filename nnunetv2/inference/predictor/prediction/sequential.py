@@ -4,7 +4,7 @@ import os
 from typing import Union, List
 
 import torch
-from nnunetv2.preprocessing.preprocessors.default_preprocessor import DefaultPreprocessor
+from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
 from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape
