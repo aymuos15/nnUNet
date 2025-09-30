@@ -10,8 +10,8 @@ import torch
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
-from nnunetv2.utilities.file_path_utilities import check_workers_alive_and_busy
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.dataset_io.file_path_utilities import check_workers_alive_and_busy
+from nnunetv2.utilities.core.helpers import empty_cache
 from ..postprocessing.export_prediction import (
     export_prediction_from_logits,
     convert_predicted_logits_to_segmentation_with_correct_shape

@@ -5,8 +5,8 @@ from torch import nn
 from torch._dynamo import OptimizedModule
 from batchgenerators.utilities.file_and_folder_operations import join
 
-from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.planning.get_network_from_plans import get_network_from_plans
+from nnunetv2.utilities.core.helpers import empty_cache
 
 
 def build_network_architecture(architecture_class_name: str,

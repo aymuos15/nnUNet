@@ -3,9 +3,9 @@ from distutils.file_util import copy_file
 
 from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkdir_p, load_json
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_raw
-from nnunetv2.utilities.dataset_name_id_conversion import convert_id_to_dataset_name
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
-from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import convert_id_to_dataset_name
+from nnunetv2.utilities.planning.plans_handler import PlansManager
+from nnunetv2.utilities.dataset_io.utils import get_filenames_of_train_images_and_targets
 
 
 def preprocess_dataset(dataset_id: int,

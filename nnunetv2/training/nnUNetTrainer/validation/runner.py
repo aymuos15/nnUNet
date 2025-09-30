@@ -14,8 +14,8 @@ from nnunetv2.inference.predict_from_raw_data import nnUNetPredictor
 from nnunetv2.inference.sliding_window_prediction import compute_gaussian
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
-from nnunetv2.utilities.file_path_utilities import check_workers_alive_and_busy
-from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot
+from nnunetv2.utilities.dataset_io.file_path_utilities import check_workers_alive_and_busy
+from nnunetv2.utilities.planning.label_handling import convert_labelmap_to_one_hot
 
 from ..initialization.network import set_deep_supervision_enabled, _do_i_compile
 

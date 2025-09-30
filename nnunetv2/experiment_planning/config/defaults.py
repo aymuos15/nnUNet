@@ -3,7 +3,7 @@ Default configuration values for experiment planning.
 """
 
 import os
-from nnunetv2.utilities.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
 
 # Default number of processes for different operations
 DEFAULT_NUM_PROCESSES = 8 if 'nnUNet_def_n_proc' not in os.environ else int(os.environ['nnUNet_def_n_proc'])

@@ -11,8 +11,8 @@ from threadpoolctl import threadpool_limits
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.training.dataloading.nnunet_dataset import nnUNetBaseDataset
 from nnunetv2.training.dataloading.nnunet_dataset import nnUNetDatasetBlosc2
-from nnunetv2.utilities.label_handling.label_handling import LabelManager
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
+from nnunetv2.utilities.planning.label_handling import LabelManager
+from nnunetv2.utilities.planning.plans_handler import PlansManager
 from acvl_utils.cropping_and_padding.bounding_boxes import crop_and_pad_nd
 
 

@@ -153,7 +153,7 @@ def build_network_architecture(architecture_class_name: str,
     Returns:
         torch.nn.Module: The built network
     """
-    from nnunetv2.utilities.get_network_from_plans import get_network_from_plans
+    from nnunetv2.utilities.planning.get_network_from_plans import get_network_from_plans
 
     return get_network_from_plans(
         architecture_class_name,

@@ -4,7 +4,7 @@ Utilities for dynamically discovering and loading classes.
 
 import nnunetv2
 from batchgenerators.utilities.file_and_folder_operations import join
-from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
+from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
 
 
 def find_fingerprint_extractor_class(class_name: str):

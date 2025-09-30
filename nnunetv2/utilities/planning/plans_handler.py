@@ -14,15 +14,15 @@ import nnunetv2
 from batchgenerators.utilities.file_and_folder_operations import load_json, join
 
 from nnunetv2.imageio.reader_writer_registry import recursive_find_reader_writer_by_name
-from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
-from nnunetv2.utilities.label_handling.label_handling import get_labelmanager_class_from_plans
+from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
+from nnunetv2.utilities.planning.label_handling import get_labelmanager_class_from_plans
 
 # see https://adamj.eu/tech/2021/05/13/python-type-hints-how-to-fix-circular-imports/
 from typing import TYPE_CHECKING
 from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 
 if TYPE_CHECKING:
-    from nnunetv2.utilities.label_handling.label_handling import LabelManager
+    from nnunetv2.utilities.planning.label_handling import LabelManager
     from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
     from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
     from nnunetv2.experiment_planning.experiment_planners.default_experiment_planner import ExperimentPlanner
@@ -327,7 +327,7 @@ class PlansManager(object):
 
 if __name__ == '__main__':
     from nnunetv2.paths import nnUNet_preprocessed
-    from nnunetv2.utilities.dataset_name_id_conversion import maybe_convert_to_dataset_name
+    from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 
     plans = load_json(join(nnUNet_preprocessed, maybe_convert_to_dataset_name(3), 'nnUNetPlans.json'))
     # build new configuration that inherits from 3d_fullres

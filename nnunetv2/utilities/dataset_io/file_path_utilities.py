@@ -3,9 +3,8 @@ from typing import Union, Tuple
 import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import *
 
-from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.paths import nnUNet_results
-from nnunetv2.utilities.dataset_name_id_conversion import maybe_convert_to_dataset_name
+from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 
 
 def convert_trainer_plans_config_to_identifier(trainer_name, plans_identifier, configuration):

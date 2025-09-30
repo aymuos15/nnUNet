@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 from batchgenerators.utilities.file_and_folder_operations import join, load_json, save_json, isfile, maybe_mkdir_p
 from nnunetv2.paths import nnUNet_preprocessed
-from nnunetv2.utilities.dataset_name_id_conversion import convert_id_to_dataset_name
+from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import convert_id_to_dataset_name
 
 
 def get_plans_file_path(dataset_id: int, plans_name: str = 'nnUNetPlans') -> str:

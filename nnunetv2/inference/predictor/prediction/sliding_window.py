@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from .sliding_window_utils import compute_steps_for_sliding_window, compute_gaussian
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.core.helpers import empty_cache
 
 
 def get_sliding_window_slicers(predictor, image_size: Tuple[int, ...]):

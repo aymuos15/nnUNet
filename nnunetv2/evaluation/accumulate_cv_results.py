@@ -6,7 +6,7 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.evaluation.evaluate_predictions import compute_metrics_on_folder
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
+from nnunetv2.utilities.planning.plans_handler import PlansManager
 
 
 def accumulate_cv_results(trained_model_folder,

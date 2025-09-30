@@ -7,7 +7,7 @@ from nnunetv2.training.lr_scheduler.warmup import Lin_incr_LRScheduler, PolyLRSc
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.core.helpers import empty_cache
 
 
 class nnUNetTrainer_warmup(nnUNetTrainer):

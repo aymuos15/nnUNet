@@ -4,7 +4,7 @@ import os
 import torch
 import multiprocessing
 from batchgenerators.utilities.file_and_folder_operations import isdir, maybe_mkdir_p
-from nnunetv2.utilities.file_path_utilities import get_output_folder
+from nnunetv2.utilities.dataset_io.file_path_utilities import get_output_folder
 
 
 def _getDefaultValue(env: str, dtype: type, default: any) -> any:

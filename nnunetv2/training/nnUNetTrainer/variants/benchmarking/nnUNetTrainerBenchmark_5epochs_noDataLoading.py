@@ -3,7 +3,7 @@ import torch
 from nnunetv2.training.nnUNetTrainer.variants.benchmarking.nnUNetTrainerBenchmark_5epochs import (
     nnUNetTrainerBenchmark_5epochs,
 )
-from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
+from nnunetv2.utilities.planning.label_handling import determine_num_input_channels
 
 
 class nnUNetTrainerBenchmark_5epochs_noDataLoading(nnUNetTrainerBenchmark_5epochs):

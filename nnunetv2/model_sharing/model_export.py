@@ -1,6 +1,6 @@
 import zipfile
 
-from nnunetv2.utilities.file_path_utilities import *
+from nnunetv2.utilities.dataset_io.file_path_utilities import *
 
 
 def export_pretrained_model(dataset_name_or_id: Union[int, str], output_file: str,

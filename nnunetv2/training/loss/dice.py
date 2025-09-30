@@ -1,7 +1,7 @@
 from typing import Callable
 
 import torch
-from nnunetv2.utilities.ddp_allgather import AllGatherGrad
+from nnunetv2.utilities.training_runtime.ddp_allgather import AllGatherGrad
 from torch import nn
 
 
@@ -181,7 +181,7 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
 
 if __name__ == '__main__':
-    from nnunetv2.utilities.helpers import softmax_helper_dim1
+    from nnunetv2.utilities.core.helpers import softmax_helper_dim1
     pred = torch.rand((2, 3, 32, 32, 32))
     ref = torch.randint(0, 3, (2, 32, 32, 32))
 

@@ -6,8 +6,8 @@ from typing import Dict, List, Tuple
 
 from batchgenerators.utilities.file_and_folder_operations import join, load_json
 from nnunetv2.paths import nnUNet_raw
-from nnunetv2.utilities.dataset_name_id_conversion import convert_id_to_dataset_name, maybe_convert_to_dataset_name
-from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import convert_id_to_dataset_name, maybe_convert_to_dataset_name
+from nnunetv2.utilities.dataset_io.utils import get_filenames_of_train_images_and_targets
 
 
 def get_dataset_info(dataset_id: int) -> Dict:

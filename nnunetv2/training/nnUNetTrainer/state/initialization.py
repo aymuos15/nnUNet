@@ -7,8 +7,8 @@ from torch.cuda import device_count
 from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkdir_p
 
 from nnunetv2.training.logging.nnunet_logger import nnUNetLogger
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
-from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
+from nnunetv2.utilities.planning.plans_handler import PlansManager
+from nnunetv2.utilities.planning.label_handling import determine_num_input_channels
 from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
 
 from ..initialization.config import setup_output_folders, setup_cascaded_folders, _set_batch_size_and_oversample

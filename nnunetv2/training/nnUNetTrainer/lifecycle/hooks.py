@@ -8,8 +8,8 @@ from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAu
 from batchgenerators.dataloading.nondet_multi_threaded_augmenter import NonDetMultiThreadedAugmenter
 from batchgenerators.utilities.file_and_folder_operations import join, isfile
 
-from nnunetv2.utilities.default_n_proc_DA import get_allowed_n_proc_DA
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.utilities.core.helpers import empty_cache
 from ..data.loaders import get_dataloaders
 from ..initialization.config import ensure_output_folder_exists, copy_plans_and_dataset_json
 from ..initialization.network import set_deep_supervision_enabled, plot_network_architecture

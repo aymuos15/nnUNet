@@ -2,7 +2,7 @@ import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import join, load_json, isfile, save_json
 
 from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
-from nnunetv2.utilities.crossval_split import generate_crossval_split
+from nnunetv2.utilities.training_runtime.crossval_split import generate_crossval_split
 
 
 def do_split(trainer_instance):

@@ -9,9 +9,9 @@ from torch.nn.parallel import DistributedDataParallel
 from batchgenerators.utilities.file_and_folder_operations import load_json, join, isfile, subdirs
 
 import nnunetv2
-from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
-from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager
+from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
+from nnunetv2.utilities.planning.label_handling import determine_num_input_channels
+from nnunetv2.utilities.planning.plans_handler import PlansManager
 
 
 def initialize_from_trained_model_folder(predictor,

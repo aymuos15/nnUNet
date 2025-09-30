@@ -11,7 +11,7 @@ from ..postprocessing.export_prediction import (
 )
 from .sliding_window_utils import compute_gaussian
 from ..utils.config_saver import save_prediction_args_and_dataset
-from nnunetv2.utilities.helpers import empty_cache
+from nnunetv2.utilities.core.helpers import empty_cache
 
 
 def predict_from_files_sequential(predictor,

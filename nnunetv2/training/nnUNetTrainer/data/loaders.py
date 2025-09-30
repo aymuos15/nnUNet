@@ -4,7 +4,7 @@ from batchgenerators.dataloading.single_threaded_augmenter import SingleThreaded
 
 from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
 from nnunetv2.training.dataloading.data_loader import nnUNetDataLoader
-from nnunetv2.utilities.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
 from .datasets import get_tr_and_val_datasets
 from .transforms import get_training_transforms, get_validation_transforms
 from ..initialization.config import configure_rotation_dummyDA_mirroring_and_inital_patch_size

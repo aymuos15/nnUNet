@@ -29,10 +29,10 @@ from nnunetv2.paths import nnUNet_preprocessed, nnUNet_raw
 from nnunetv2.preprocessing.cropping.cropping import crop_to_nonzero
 from nnunetv2.preprocessing.resampling.default_resampling import compute_new_shape
 from nnunetv2.training.dataloading.nnunet_dataset import nnUNetDatasetBlosc2
-from nnunetv2.utilities.dataset_name_id_conversion import maybe_convert_to_dataset_name
-from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
-from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
-from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
+from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
+from nnunetv2.utilities.planning.plans_handler import PlansManager, ConfigurationManager
+from nnunetv2.utilities.dataset_io.utils import get_filenames_of_train_images_and_targets
 
 
 class DefaultPreprocessor(object):

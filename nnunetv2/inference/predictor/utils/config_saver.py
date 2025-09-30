@@ -3,7 +3,7 @@
 import inspect
 from copy import deepcopy
 from batchgenerators.utilities.file_and_folder_operations import maybe_mkdir_p, save_json, join
-from nnunetv2.utilities.json_export import recursive_fix_for_json_export
+from nnunetv2.utilities.core.json_export import recursive_fix_for_json_export
 
 
 def save_prediction_args_and_dataset(predictor, output_folder: str, calling_function, local_vars: dict):

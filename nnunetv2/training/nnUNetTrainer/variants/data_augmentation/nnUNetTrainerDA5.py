@@ -32,8 +32,8 @@ from nnunetv2.training.data_augmentation.custom_transforms.transforms_for_dummy_
 from nnunetv2.training.dataloading.data_loader import nnUNetDataLoader
 from nnunetv2.training.loss.dice import get_tp_fp_fn_tn
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from nnunetv2.utilities.default_n_proc_DA import get_allowed_n_proc_DA
-from nnunetv2.utilities.helpers import dummy_context
+from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.utilities.core.helpers import dummy_context
 
 
 class nnUNetTrainerDA5(nnUNetTrainer):

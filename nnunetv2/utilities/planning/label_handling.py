@@ -8,14 +8,14 @@ from acvl_utils.cropping_and_padding.bounding_boxes import bounding_box_to_slice
 from batchgenerators.utilities.file_and_folder_operations import join
 
 import nnunetv2
-from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
-from nnunetv2.utilities.helpers import softmax_helper_dim0
+from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
+from nnunetv2.utilities.core.helpers import softmax_helper_dim0
 
 from typing import TYPE_CHECKING
 
 # see https://adamj.eu/tech/2021/05/13/python-type-hints-how-to-fix-circular-imports/
 if TYPE_CHECKING:
-    from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
+    from nnunetv2.utilities.planning.plans_handler import PlansManager, ConfigurationManager
 
 
 class LabelManager(object):
@@ -250,9 +250,9 @@ def get_labelmanager_class_from_plans(plans: dict) -> Type[LabelManager]:
         print('No label manager specified in plans. Using default: LabelManager')
         return LabelManager
     else:
-        labelmanager_class = recursive_find_python_class(join(nnunetv2.__path__[0], "utilities", "label_handling"),
+        labelmanager_class = recursive_find_python_class(join(nnunetv2.__path__[0], "utilities", "planning"),
                                                          plans['label_manager'],
-                                                         current_module="nnunetv2.utilities.label_handling")
+                                                         current_module="nnunetv2.utilities.planning")
         return labelmanager_class
 
 
