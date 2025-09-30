@@ -5,7 +5,7 @@ from torch import nn
 from typing import Union, List, Tuple, Optional
 import numpy as np
 
-from nnunetv2.utilities.planning.plans_handler import PlansManager, ConfigurationManager
+from nnunetv2.experiment_planning.planning.plans_handler import PlansManager, ConfigurationManager
 
 
 class nnUNetPredictor(object):

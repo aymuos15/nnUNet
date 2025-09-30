@@ -15,7 +15,7 @@ from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
 from nnunetv2.preprocessing.normalization.map_channel_name_to_normalization import get_normalization_scheme
 from nnunetv2.preprocessing.resampling.default_resampling import resample_data_or_seg_to_shape, compute_new_shape
 from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
-from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
 from nnunetv2.architecture import get_network_from_plans
 from nnunetv2.utilities.core.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.dataset_io.utils import get_filenames_of_train_images_and_targets

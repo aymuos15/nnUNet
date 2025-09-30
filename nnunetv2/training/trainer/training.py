@@ -13,7 +13,7 @@ from torch import autocast, distributed as dist
 
 from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
 from nnunetv2.utilities.core.helpers import dummy_context
-from nnunetv2.utilities.training_runtime.collate_outputs import collate_outputs
+from nnunetv2.training.runtime_utils.collate_outputs import collate_outputs
 
 
 def configure_optimizers(trainer_instance):

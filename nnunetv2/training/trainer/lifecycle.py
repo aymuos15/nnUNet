@@ -24,7 +24,7 @@ from batchgenerators.utilities.file_and_folder_operations import join, save_json
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_results
 from nnunetv2.training.data.transforms.compute_initial_patch_size import get_patch_size
-from nnunetv2.utilities.training_runtime.default_n_proc_DA import get_allowed_n_proc_DA
+from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
 from nnunetv2.utilities.core.helpers import empty_cache
 
 from .training import train_step, on_train_epoch_end, on_validation_epoch_end

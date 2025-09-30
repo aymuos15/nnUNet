@@ -13,7 +13,7 @@ from blosc2 import Filter, Codec
 from batchgenerators.utilities.file_and_folder_operations import join, load_pickle, isfile, write_pickle, subfiles, load_json, save_json
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.training.data.utils import unpack_dataset
-from nnunetv2.utilities.training_runtime.crossval_split import generate_crossval_split
+from nnunetv2.training.runtime_utils.crossval_split import generate_crossval_split
 import math
 
 

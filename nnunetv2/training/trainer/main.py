@@ -19,8 +19,8 @@ from nnunetv2.training.configs import TrainerConfig
 from nnunetv2.training.logging.metrics import nnUNetLogger
 from nnunetv2.training.logging.console import print_to_log_file, print_plans, _save_debug_information
 from nnunetv2.training.losses.builder import _build_loss, _get_deep_supervision_scales
-from nnunetv2.utilities.planning.plans_handler import PlansManager
-from nnunetv2.utilities.planning.label_handling import determine_num_input_channels
+from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
+from nnunetv2.experiment_planning.planning.label_handling import determine_num_input_channels
 from nnunetv2.architecture import build_network_architecture
 from nnunetv2.training.data.dataset import infer_dataset_class
 

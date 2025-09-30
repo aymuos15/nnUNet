@@ -1,7 +1,7 @@
 from typing import Callable
 
 import torch
-from nnunetv2.utilities.training_runtime.ddp_allgather import AllGatherGrad
+from nnunetv2.training.runtime_utils.ddp_allgather import AllGatherGrad
 from torch import nn
 
 

@@ -7,8 +7,8 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, save
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.training.data.dataset import nnUNetDatasetBlosc2
-from nnunetv2.utilities.planning.label_handling import LabelManager
-from nnunetv2.utilities.planning.plans_handler import PlansManager, ConfigurationManager
+from nnunetv2.experiment_planning.planning.label_handling import LabelManager
+from nnunetv2.experiment_planning.planning.plans_handler import PlansManager, ConfigurationManager
 
 
 def convert_predicted_logits_to_segmentation_with_correct_shape(predicted_logits: Union[torch.Tensor, np.ndarray],
