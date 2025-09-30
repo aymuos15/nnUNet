@@ -38,13 +38,25 @@ def get_dataloaders(trainer_instance):
     ) = configure_rotation_dummyDA_mirroring_and_inital_patch_size(trainer_instance)
 
     # training pipeline
-    tr_transforms = get_training_transforms(
-        patch_size, rotation_for_DA, deep_supervision_scales, mirror_axes, do_dummy_2d_data_aug,
-        use_mask_for_norm=trainer_instance.configuration_manager.use_mask_for_norm,
-        is_cascaded=trainer_instance.is_cascaded,
-        foreground_labels=trainer_instance.label_manager.foreground_labels,
-        regions=trainer_instance.label_manager.foreground_regions if trainer_instance.label_manager.has_regions else None,
-        ignore_label=trainer_instance.label_manager.ignore_label)
+    # Check if custom training transforms builder is provided in config
+    if (hasattr(trainer_instance, 'trainer_config') and
+        trainer_instance.trainer_config is not None and
+        trainer_instance.trainer_config.training_transforms_builder is not None):
+        tr_transforms = trainer_instance.trainer_config.training_transforms_builder(
+            patch_size, rotation_for_DA, deep_supervision_scales, mirror_axes, do_dummy_2d_data_aug,
+            use_mask_for_norm=trainer_instance.configuration_manager.use_mask_for_norm,
+            is_cascaded=trainer_instance.is_cascaded,
+            foreground_labels=trainer_instance.label_manager.foreground_labels,
+            regions=trainer_instance.label_manager.foreground_regions if trainer_instance.label_manager.has_regions else None,
+            ignore_label=trainer_instance.label_manager.ignore_label)
+    else:
+        tr_transforms = get_training_transforms(
+            patch_size, rotation_for_DA, deep_supervision_scales, mirror_axes, do_dummy_2d_data_aug,
+            use_mask_for_norm=trainer_instance.configuration_manager.use_mask_for_norm,
+            is_cascaded=trainer_instance.is_cascaded,
+            foreground_labels=trainer_instance.label_manager.foreground_labels,
+            regions=trainer_instance.label_manager.foreground_regions if trainer_instance.label_manager.has_regions else None,
+            ignore_label=trainer_instance.label_manager.ignore_label)
 
     # validation pipeline
     val_transforms = get_validation_transforms(deep_supervision_scales,

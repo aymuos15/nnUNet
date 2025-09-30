@@ -109,6 +109,18 @@ def configure_rotation_dummyDA_mirroring_and_inital_patch_size(trainer_instance)
     trainer_instance.print_to_log_file(f'do_dummy_2d_data_aug: {do_dummy_2d_data_aug}')
     trainer_instance.inference_allowed_mirroring_axes = mirror_axes
 
+    # Apply config overrides if provided
+    if hasattr(trainer_instance, 'trainer_config') and trainer_instance.trainer_config is not None:
+        config = trainer_instance.trainer_config
+        if config.mirror_axes is not None:
+            mirror_axes = config.mirror_axes
+        if config.inference_allowed_mirroring_axes is not None:
+            trainer_instance.inference_allowed_mirroring_axes = config.inference_allowed_mirroring_axes
+        if config.do_dummy_2d_data_aug is not None:
+            do_dummy_2d_data_aug = config.do_dummy_2d_data_aug
+        if config.rotation_for_DA is not None:
+            rotation_for_DA = config.rotation_for_DA
+
     return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
 
 

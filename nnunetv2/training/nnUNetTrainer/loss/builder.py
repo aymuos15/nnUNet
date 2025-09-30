@@ -17,6 +17,13 @@ def _build_loss(trainer_instance):
     Returns:
         Loss function (potentially wrapped with DeepSupervisionWrapper)
     """
+    # Check if custom loss builder is provided in config
+    if (hasattr(trainer_instance, 'trainer_config') and
+        trainer_instance.trainer_config is not None and
+        trainer_instance.trainer_config.loss_builder is not None):
+        return trainer_instance.trainer_config.loss_builder(trainer_instance)
+
+    # Default loss configuration
     if trainer_instance.label_manager.has_regions:
         loss = DC_and_BCE_loss({},
                                {'batch_dice': trainer_instance.configuration_manager.batch_dice,

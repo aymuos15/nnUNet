@@ -12,7 +12,7 @@ from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.training.execution.load_pretrained_weights import load_pretrained_weights
 from nnunetv2.training.nnUNetTrainer.main import nnUNetTrainer
 from nnunetv2.utilities.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
-from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
+from nnunetv2.training.configs import get_config
 from torch.backends import cudnn
 
 
@@ -32,19 +32,18 @@ def find_free_network_port() -> int:
 def get_trainer_from_args(dataset_name_or_id: Union[int, str],
                           configuration: str,
                           fold: int,
-                          trainer_name: str = 'nnUNetTrainer',
+                          trainer_name: str = 'base',
                           plans_identifier: str = 'nnUNetPlans',
                           device: torch.device = torch.device('cuda')):
-    # load nnunet class and do sanity checks
-    nnunet_trainer = recursive_find_python_class(join(nnunetv2.__path__[0], "training", "nnUNetTrainer"),
-                                                trainer_name, 'nnunetv2.training.nnUNetTrainer')
-    if nnunet_trainer is None:
-        raise RuntimeError(f'Could not find requested nnunet trainer {trainer_name} in '
-                           f'nnunetv2.training.nnUNetTrainer ('
-                           f'{join(nnunetv2.__path__[0], "training", "nnUNetTrainer")}). If it is located somewhere '
-                           f'else, please move it there.')
-    assert issubclass(nnunet_trainer, nnUNetTrainer), 'The requested nnunet trainer class must inherit from ' \
-                                                    'nnUNetTrainer'
+    # Load trainer config by name
+    try:
+        trainer_config = get_config(trainer_name)
+    except ValueError as e:
+        from nnunetv2.training.configs import list_configs
+        available = sorted(list_configs())
+        raise RuntimeError(f'Could not find requested trainer config "{trainer_name}". '
+                          f'Available configs: {", ".join(available)}. '
+                          f'Make sure the config is registered in nnunetv2.training.configs.presets.') from e
 
     # handle dataset input. If it's an ID we need to convert to int from string
     if dataset_name_or_id.startswith('Dataset'):
@@ -57,13 +56,13 @@ def get_trainer_from_args(dataset_name_or_id: Union[int, str],
                              f'DatasetXXX_YYY where XXX are the three(!) task ID digits. Your '
                              f'input: {dataset_name_or_id}')
 
-    # initialize nnunet trainer
+    # initialize nnunet trainer with config
     preprocessed_dataset_folder_base = join(nnUNet_preprocessed, maybe_convert_to_dataset_name(dataset_name_or_id))
     plans_file = join(preprocessed_dataset_folder_base, plans_identifier + '.json')
     plans = load_json(plans_file)
     dataset_json = load_json(join(preprocessed_dataset_folder_base, 'dataset.json'))
-    nnunet_trainer = nnunet_trainer(plans=plans, configuration=configuration, fold=fold,
-                                    dataset_json=dataset_json, device=device)
+    nnunet_trainer = nnUNetTrainer(plans=plans, configuration=configuration, fold=fold,
+                                   dataset_json=dataset_json, device=device, trainer_config=trainer_config)
     return nnunet_trainer
 
 
@@ -136,7 +135,7 @@ def run_ddp(rank, dataset_name_or_id, configuration, fold, tr, p, disable_checkp
 
 def run_training(dataset_name_or_id: Union[str, int],
                  configuration: str, fold: Union[int, str],
-                 trainer_class_name: str = 'nnUNetTrainer',
+                 trainer_config_name: str = 'base',
                  plans_identifier: str = 'nnUNetPlans',
                  pretrained_weights: Optional[str] = None,
                  num_gpus: int = 1,
@@ -177,7 +176,7 @@ def run_training(dataset_name_or_id: Union[str, int],
                      dataset_name_or_id,
                      configuration,
                      fold,
-                     trainer_class_name,
+                     trainer_config_name,
                      plans_identifier,
                      disable_checkpointing,
                      continue_training,
@@ -189,7 +188,7 @@ def run_training(dataset_name_or_id: Union[str, int],
                  nprocs=num_gpus,
                  join=True)
     else:
-        nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold, trainer_class_name,
+        nnunet_trainer = get_trainer_from_args(dataset_name_or_id, configuration, fold, trainer_config_name,
                                                plans_identifier, device=device)
 
         if disable_checkpointing:
@@ -220,8 +219,8 @@ def run_training_entry():
                         help="Configuration that should be trained")
     parser.add_argument('fold', type=str,
                         help='Fold of the 5-fold cross-validation. Should be an int between 0 and 4.')
-    parser.add_argument('-tr', type=str, required=False, default='nnUNetTrainer',
-                        help='[OPTIONAL] Use this flag to specify a custom trainer. Default: nnUNetTrainer')
+    parser.add_argument('-tr', type=str, required=False, default='base',
+                        help='[OPTIONAL] Use this flag to specify a trainer config. Default: base')
     parser.add_argument('-p', type=str, required=False, default='nnUNetPlans',
                         help='[OPTIONAL] Use this flag to specify a custom plans identifier. Default: nnUNetPlans')
     parser.add_argument('-pretrained_weights', type=str, required=False, default=None,

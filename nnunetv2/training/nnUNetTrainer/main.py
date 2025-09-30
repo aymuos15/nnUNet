@@ -1,5 +1,5 @@
 import torch
-from typing import Union
+from typing import Union, Optional
 
 # Import our modular components
 from .checkpointing.save import save_checkpoint
@@ -15,15 +15,18 @@ from .training.step import train_step
 from .training.optimizer import configure_optimizers
 from .validation.runner import perform_actual_validation
 from .validation.step import validation_step
+from nnunetv2.training.configs import TrainerConfig
 
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
-                 device: torch.device = torch.device('cuda')):
+                 device: torch.device = torch.device('cuda'),
+                 trainer_config: Optional[TrainerConfig] = None):
         # From https://grugbrain.dev/. Worth a read ya big brains ;-)
         # apex predator of grug is complexity
         # complexity bad - so we broke this down into modules!
 
+        self.trainer_config = trainer_config
         setup_trainer_state(self, plans, configuration, fold, dataset_json, device)
 
     def initialize(self):

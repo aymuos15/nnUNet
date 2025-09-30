@@ -61,16 +61,34 @@ def setup_trainer_state(trainer_instance, plans: dict, configuration: str, fold:
     trainer_instance.dataset_class = None  # -> initialize
     setup_cascaded_folders(trainer_instance)
 
-    # Training hyperparameters
+    # Training hyperparameters - defaults
     trainer_instance.initial_lr = 1e-2
     trainer_instance.weight_decay = 3e-5
     trainer_instance.oversample_foreground_percent = 0.33
     trainer_instance.probabilistic_oversampling = False
     trainer_instance.num_iterations_per_epoch = 250
     trainer_instance.num_val_iterations_per_epoch = 50
-    trainer_instance.num_epochs = 1
+    trainer_instance.num_epochs = 1000
     trainer_instance.current_epoch = 0
     trainer_instance.enable_deep_supervision = True
+
+    # Apply trainer config overrides if provided
+    if hasattr(trainer_instance, 'trainer_config') and trainer_instance.trainer_config is not None:
+        config = trainer_instance.trainer_config
+        if config.num_epochs is not None:
+            trainer_instance.num_epochs = config.num_epochs
+        if config.initial_lr is not None:
+            trainer_instance.initial_lr = config.initial_lr
+        if config.weight_decay is not None:
+            trainer_instance.weight_decay = config.weight_decay
+        if config.enable_deep_supervision is not None:
+            trainer_instance.enable_deep_supervision = config.enable_deep_supervision
+        if config.oversample_foreground_percent is not None:
+            trainer_instance.oversample_foreground_percent = config.oversample_foreground_percent
+        if config.batch_size is not None:
+            trainer_instance.batch_size = config.batch_size
+        if config.save_every is not None:
+            trainer_instance.save_every = config.save_every
 
     # Label management
     trainer_instance.label_manager = trainer_instance.plans_manager.get_label_manager(dataset_json)
