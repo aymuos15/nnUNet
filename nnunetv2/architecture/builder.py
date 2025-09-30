@@ -8,7 +8,7 @@ from plans. These functions are used by both training and inference.
 from typing import Union, List, Tuple
 from torch import nn
 
-from nnunetv2.utilities.planning.get_network_from_plans import get_network_from_plans
+from nnunetv2.architecture.instantiation import get_network_from_plans
 
 
 def build_network_architecture(architecture_class_name: str,

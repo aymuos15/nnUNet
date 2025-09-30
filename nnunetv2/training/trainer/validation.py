@@ -122,7 +122,7 @@ def perform_actual_validation(trainer_instance, save_probabilities: bool = False
         trainer_instance: The nnUNetTrainer instance
         save_probabilities: Whether to save prediction probabilities
     """
-    from .network_config import set_deep_supervision_enabled, _do_i_compile
+    from nnunetv2.architecture import set_deep_supervision_enabled, _do_i_compile
 
     set_deep_supervision_enabled(trainer_instance, False)
     trainer_instance.network.eval()

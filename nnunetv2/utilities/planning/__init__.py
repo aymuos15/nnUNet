@@ -7,8 +7,9 @@ from .label_handling import (
     get_labelmanager_class_from_plans,
 )
 from .plans_handler import ConfigurationManager, PlansManager
-from .get_network_from_plans import get_network_from_plans
-from .network_building import build_network_architecture
+
+# Backward compatibility: network-related functions moved to nnunetv2.architecture
+from nnunetv2.architecture import get_network_from_plans, build_network_architecture
 
 __all__ = [
     "LabelManager",
