@@ -12,36 +12,36 @@
 # echo "=========================================="
 # nnUNetv2_train 004 3d_fullres 0
 
-echo ""
-echo "=========================================="
-echo "Step 2: Clean previous training results"
-echo "=========================================="
-# Clean old checkpoints to ensure fresh training with updated architecture
-# Use nnUNet environment variables instead of hardcoded paths
-rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres"
+# echo ""
+# echo "=========================================="
+# echo "Step 2: Clean previous training results"
+# echo "=========================================="
+# # Clean old checkpoints to ensure fresh training with updated architecture
+# # Use nnUNet environment variables instead of hardcoded paths
+# rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres"
 
-echo ""
-echo "=========================================="
-echo "Step 3: Train DynamicKiUNet (1 epoch, 50% features, batch_size=1)"
-echo "=========================================="
-# Use kiunet_minimal config - dual-branch arch needs reduced features for 24GB GPU
-# Disable torch.compile to save memory
-export nnUNet_compile="false"
-# Use cuda:1 device
-export CUDA_VISIBLE_DEVICES=1
-nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
+# echo ""
+# echo "=========================================="
+# echo "Step 3: Train DynamicKiUNet (1 epoch, 50% features, batch_size=1)"
+# echo "=========================================="
+# # Use kiunet_minimal config - dual-branch arch needs reduced features for 24GB GPU
+# # Disable torch.compile to save memory
+# export nnUNet_compile="false"
+# # Use cuda:1 device
+# export CUDA_VISIBLE_DEVICES=1
+# nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
 
-echo ""
-echo "=========================================="
-echo "Step 4: Predict with DynamicKiUNet"
-echo "=========================================="
-# Predict with DynamicKiUNet (config auto-detected from checkpoint)
-nnUNetv2_predict -i "${nnUNet_raw}/Dataset004_Hippocampus/imagesTs" \
-                 -o "${nnUNet_results}/kiunet" \
-                 -d 004 \
-                 -c 3d_fullres \
-                 -f 0 \
-                 -npp 5
+# echo ""
+# echo "=========================================="
+# echo "Step 4: Predict with DynamicKiUNet"
+# echo "=========================================="
+# # Predict with DynamicKiUNet (config auto-detected from checkpoint)
+# nnUNetv2_predict -i "${nnUNet_raw}/Dataset004_Hippocampus/imagesTs" \
+#                  -o "${nnUNet_results}/kiunet" \
+#                  -d 004 \
+#                  -c 3d_fullres \
+#                  -f 0 \
+#                  -npp 5
 
 echo ""
 echo "=========================================="
