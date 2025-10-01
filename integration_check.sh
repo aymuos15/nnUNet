@@ -159,7 +159,7 @@ if [ "$RUN_KIUNET" = true ]; then
         echo -e "${GREEN}=========================================="
         echo "Cleaning previous KiU-Net results"
         echo -e "==========================================${NC}"
-        rm -rf "${nnUNet_results}/Dataset$(printf '%03d' $DATASET)_*/nnUNetTrainer__nnUNetPlans__3d_fullres"
+        rm -rf "${nnUNet_results}/Dataset$(printf '%03d' $DATASET)_*/kiunet_minimal__nnUNetPlans__3d_fullres"
         echo ""
     fi
 
@@ -193,7 +193,7 @@ if [ "$RUN_UIUNET" = true ]; then
         echo -e "${GREEN}=========================================="
         echo "Cleaning previous UIU-Net results"
         echo -e "==========================================${NC}"
-        rm -rf "${nnUNet_results}/Dataset$(printf '%03d' $DATASET)_*/nnUNetTrainer__nnUNetPlans__3d_fullres"
+        rm -rf "${nnUNet_results}/Dataset$(printf '%03d' $DATASET)_*/uiunet_minimal__nnUNetPlans__3d_fullres"
         echo ""
     fi
 
