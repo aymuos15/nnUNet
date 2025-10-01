@@ -65,7 +65,7 @@ class BlobDiceLoss(nn.Module):
     Blob-wise Dice Loss for instance-aware segmentation.
 
     For each foreground class, computes connected components in GT and calculates
-    Dice per blob. Final loss = 1 - mean(blob dice scores).
+    Dice per blob. Final loss = -mean(blob dice scores).
 
     This encourages accurate per-instance segmentation rather than just foreground/background.
 
@@ -73,18 +73,21 @@ class BlobDiceLoss(nn.Module):
         apply_nonlin: Optional nonlinearity (e.g., softmax, sigmoid)
         include_background: Whether to compute loss for background class
         smooth: Smoothing factor for dice computation
+        batch_dice: If True, aggregate blob scores across batch before computing mean (more stable)
     """
 
     def __init__(
         self,
         apply_nonlin=None,
         include_background: bool = False,
-        smooth: float = 1e-6
+        smooth: float = 1e-6,
+        batch_dice: bool = False
     ):
         super().__init__()
         self.apply_nonlin = apply_nonlin
         self.include_background = include_background
         self.smooth = smooth
+        self.batch_dice = batch_dice
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -121,52 +124,94 @@ class BlobDiceLoss(nn.Module):
         # Determine which classes to process
         class_indices = list(range(c)) if self.include_background else list(range(1, c))
 
-        # Compute blob-wise dice per sample
-        batch_losses = []
+        if self.batch_dice:
+            # Batch mode: aggregate all blob scores across entire batch
+            all_blob_scores = []
 
-        for bidx in range(b):
-            sample_blob_scores = []
+            for bidx in range(b):
+                for cls in class_indices:
+                    gt_class = y_onehot[bidx, cls]  # [D, H, W]
 
-            for cls in class_indices:
-                gt_class = y_onehot[bidx, cls]  # [D, H, W]
-
-                # Skip if no foreground pixels
-                if not gt_class.any():
-                    continue
-
-                # Find connected components (blobs) in ground truth
-                labels, num_blobs = _connected_components(gt_class)
-
-                if num_blobs == 0:
-                    continue
-
-                pred_class = x[bidx, cls]  # [D, H, W]
-
-                # Compute dice per blob
-                for blob_id in range(1, num_blobs + 1):
-                    blob_mask = (labels == blob_id)
-
-                    # Extract predictions and targets for this blob
-                    pred_blob = pred_class[blob_mask]
-                    gt_blob = gt_class[blob_mask].float()
-
-                    if pred_blob.numel() == 0:
+                    # Skip if no foreground pixels
+                    if not gt_class.any():
                         continue
 
-                    # Compute dice for this blob
-                    dice = _dice_score(pred_blob, gt_blob, eps=self.smooth)
-                    sample_blob_scores.append(dice)
+                    # Find connected components (blobs) in ground truth
+                    labels, num_blobs = _connected_components(gt_class)
 
-            # Average dice across all blobs in this sample
-            if sample_blob_scores:
-                sample_dice = torch.mean(torch.stack(sample_blob_scores))
-                batch_losses.append(1.0 - sample_dice)  # Convert to loss
+                    if num_blobs == 0:
+                        continue
+
+                    pred_class = x[bidx, cls]  # [D, H, W]
+
+                    # Compute dice per blob
+                    for blob_id in range(1, num_blobs + 1):
+                        blob_mask = (labels == blob_id)
+
+                        # Extract predictions and targets for this blob
+                        pred_blob = pred_class[blob_mask]
+                        gt_blob = gt_class[blob_mask].float()
+
+                        if pred_blob.numel() == 0:
+                            continue
+
+                        # Compute dice for this blob
+                        dice = _dice_score(pred_blob, gt_blob, eps=self.smooth)
+                        all_blob_scores.append(dice)
+
+            # Mean across all blobs in batch, return negative
+            if all_blob_scores:
+                return -torch.mean(torch.stack(all_blob_scores))
             else:
-                # No foreground blobs - zero loss for this sample
-                batch_losses.append(x[bidx, 0].sum() * 0.0)
+                return x[0, 0].sum() * 0.0
 
-        # Average loss across batch
-        return torch.mean(torch.stack(batch_losses))
+        else:
+            # Per-sample mode: compute dice per sample, then average
+            batch_losses = []
+
+            for bidx in range(b):
+                sample_blob_scores = []
+
+                for cls in class_indices:
+                    gt_class = y_onehot[bidx, cls]  # [D, H, W]
+
+                    # Skip if no foreground pixels
+                    if not gt_class.any():
+                        continue
+
+                    # Find connected components (blobs) in ground truth
+                    labels, num_blobs = _connected_components(gt_class)
+
+                    if num_blobs == 0:
+                        continue
+
+                    pred_class = x[bidx, cls]  # [D, H, W]
+
+                    # Compute dice per blob
+                    for blob_id in range(1, num_blobs + 1):
+                        blob_mask = (labels == blob_id)
+
+                        # Extract predictions and targets for this blob
+                        pred_blob = pred_class[blob_mask]
+                        gt_blob = gt_class[blob_mask].float()
+
+                        if pred_blob.numel() == 0:
+                            continue
+
+                        # Compute dice for this blob
+                        dice = _dice_score(pred_blob, gt_blob, eps=self.smooth)
+                        sample_blob_scores.append(dice)
+
+                # Average dice across all blobs in this sample
+                if sample_blob_scores:
+                    sample_dice = torch.mean(torch.stack(sample_blob_scores))
+                    batch_losses.append(-sample_dice)  # Return negative dice
+                else:
+                    # No foreground blobs - zero loss for this sample
+                    batch_losses.append(x[bidx, 0].sum() * 0.0)
+
+            # Average loss across batch
+            return torch.mean(torch.stack(batch_losses))
 
 
 class BlobDiceCELoss(nn.Module):
@@ -180,6 +225,7 @@ class BlobDiceCELoss(nn.Module):
         ce_weight: Weight for cross-entropy term (default: 1.0)
         apply_nonlin: Nonlinearity for dice (CE handles its own softmax)
         include_background: Whether to include background in dice
+        batch_dice: If True, aggregate blob scores across batch before computing mean (more stable)
     """
 
     def __init__(
@@ -187,7 +233,8 @@ class BlobDiceCELoss(nn.Module):
         blob_weight: float = 1.0,
         ce_weight: float = 1.0,
         apply_nonlin=None,
-        include_background: bool = False
+        include_background: bool = False,
+        batch_dice: bool = False
     ):
         super().__init__()
         self.blob_weight = blob_weight
@@ -195,7 +242,8 @@ class BlobDiceCELoss(nn.Module):
 
         self.blob_dice = BlobDiceLoss(
             apply_nonlin=apply_nonlin,
-            include_background=include_background
+            include_background=include_background,
+            batch_dice=batch_dice
         )
         self.ce = nn.CrossEntropyLoss()
 

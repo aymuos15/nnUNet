@@ -62,16 +62,24 @@ class RegionDiceLoss(nn.Module):
 
     For each applicable channel, we find connected components in the GT channel (excluding ignore voxels) and compute
     a Dice score per component. Per-channel Dice = mean over its components. Per-sample Dice = mean over channels that
-    had at least one component. Final loss is mean over batch of (1 - per-sample Dice).
+    had at least one component. Final loss is -mean(per-sample Dice) or -mean(all region scores) if batch_dice=True.
 
     Empty samples (no channels with components) yield zero loss (no gradient for that sample).
+
+    Args:
+        apply_nonlin: Optional nonlinearity to apply to predictions
+        include_background: Whether to include background class (only for has_regions=False)
+        has_regions: Whether using region-based mode (True) or multiclass mode (False)
+        has_ignore: Whether target has an ignore channel at y[:, -1]
+        batch_dice: If True, aggregate region scores across batch before computing mean (more stable)
     """
-    def __init__(self, apply_nonlin=None, include_background: bool = False, has_regions: bool = False, has_ignore: bool = False):
+    def __init__(self, apply_nonlin=None, include_background: bool = False, has_regions: bool = False, has_ignore: bool = False, batch_dice: bool = False):
         super().__init__()
         self.apply_nonlin = apply_nonlin
         self.include_background = include_background
         self.has_regions = has_regions
         self.has_ignore = has_ignore
+        self.batch_dice = batch_dice
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         spatial_dims = x.shape[2:]
@@ -112,35 +120,67 @@ class RegionDiceLoss(nn.Module):
         else:
             class_indices = list(range(c)) if self.include_background else list(range(1, c))
 
-        losses = []
-        for bidx in range(b):
-            per_sample_scores = []
-            ignore_mask = ignore_channel[bidx] if (ignore_channel is not None) else None
-            for cls in class_indices:
-                gt_class = y_onehot[bidx, cls]
-                if ignore_mask is not None:
-                    gt_class = gt_class & (~ignore_mask)
-                if not gt_class.any():
-                    continue
-                labels, num = _connected_components(gt_class)
-                if num == 0:
-                    continue
-                pred_class = x[bidx, cls]
-                region_scores = []
-                for region_label in range(1, num + 1):
-                    region_mask = (labels == region_label)
+        if self.batch_dice:
+            # Batch mode: aggregate all region scores across entire batch
+            all_region_scores = []
+            for bidx in range(b):
+                ignore_mask = ignore_channel[bidx] if (ignore_channel is not None) else None
+                for cls in class_indices:
+                    gt_class = y_onehot[bidx, cls]
                     if ignore_mask is not None:
-                        region_mask = region_mask & (~ignore_mask)
-                    pred_vals = pred_class[region_mask]
-                    if pred_vals.numel() == 0:
+                        gt_class = gt_class & (~ignore_mask)
+                    if not gt_class.any():
                         continue
-                    gt_vals = gt_class[region_mask].float()
-                    score = _dice_score(pred_vals, gt_vals)
-                    region_scores.append(score)
-                if region_scores:
-                    per_sample_scores.append(torch.mean(torch.stack(region_scores)))
-            if per_sample_scores:
-                losses.append(1 - torch.mean(torch.stack(per_sample_scores)))
+                    labels, num = _connected_components(gt_class)
+                    if num == 0:
+                        continue
+                    pred_class = x[bidx, cls]
+                    for region_label in range(1, num + 1):
+                        region_mask = (labels == region_label)
+                        if ignore_mask is not None:
+                            region_mask = region_mask & (~ignore_mask)
+                        pred_vals = pred_class[region_mask]
+                        if pred_vals.numel() == 0:
+                            continue
+                        gt_vals = gt_class[region_mask].float()
+                        score = _dice_score(pred_vals, gt_vals)
+                        all_region_scores.append(score)
+            # Mean across all regions in batch, return negative
+            if all_region_scores:
+                return -torch.mean(torch.stack(all_region_scores))
             else:
-                losses.append(x[bidx, 0].sum() * 0)
-        return torch.mean(torch.stack(losses))
+                return x[0, 0].sum() * 0
+        else:
+            # Per-sample mode: compute dice per sample, then average
+            losses = []
+            for bidx in range(b):
+                per_sample_scores = []
+                ignore_mask = ignore_channel[bidx] if (ignore_channel is not None) else None
+                for cls in class_indices:
+                    gt_class = y_onehot[bidx, cls]
+                    if ignore_mask is not None:
+                        gt_class = gt_class & (~ignore_mask)
+                    if not gt_class.any():
+                        continue
+                    labels, num = _connected_components(gt_class)
+                    if num == 0:
+                        continue
+                    pred_class = x[bidx, cls]
+                    region_scores = []
+                    for region_label in range(1, num + 1):
+                        region_mask = (labels == region_label)
+                        if ignore_mask is not None:
+                            region_mask = region_mask & (~ignore_mask)
+                        pred_vals = pred_class[region_mask]
+                        if pred_vals.numel() == 0:
+                            continue
+                        gt_vals = gt_class[region_mask].float()
+                        score = _dice_score(pred_vals, gt_vals)
+                        region_scores.append(score)
+                    if region_scores:
+                        per_sample_scores.append(torch.mean(torch.stack(region_scores)))
+                if per_sample_scores:
+                    losses.append(-torch.mean(torch.stack(per_sample_scores)))
+                else:
+                    losses.append(x[bidx, 0].sum() * 0)
+            return torch.mean(torch.stack(losses))
