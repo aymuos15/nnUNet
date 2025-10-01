@@ -54,23 +54,50 @@ def initialize_from_trained_model_folder(predictor,
 
     # Restore network
     num_input_channels = determine_num_input_channels(plans_manager, configuration_manager, dataset_json)
-    # After refactoring, trainer classes are in nnunetv2/training/trainer/ directory
-    # but we maintain backward compatibility by also checking nnunetv2/training/nnUNetTrainer.py
-    trainer_class = recursive_find_python_class(join(nnunetv2.__path__[0], "training"),
-                                                trainer_name, 'nnunetv2.training')
-    if trainer_class is None:
-        raise RuntimeError(f'Unable to locate trainer class {trainer_name} in nnunetv2.training. '
-                          f'Please place it there (or in a submodule) and make sure it can be imported with '
-                          f'"from nnunetv2.training import {trainer_name}"')
 
-    network = trainer_class.build_network_architecture(
-        configuration_manager.network_arch_class_name,
-        configuration_manager.network_arch_init_kwargs,
-        configuration_manager.network_arch_init_kwargs_req_import,
-        num_input_channels,
-        plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
-        enable_deep_supervision=False
-    )
+    # Check if a trainer config was used during training
+    trainer_config_name = checkpoint.get('trainer_config_name', None)
+    if trainer_config_name is not None:
+        # Try to get the config and use its custom network builder
+        try:
+            from nnunetv2.training.configs import get_config
+            config = get_config(trainer_config_name)
+            if config.network_builder is not None:
+                # Use the custom network builder from the config
+                network = config.network_builder(
+                    configuration_manager.network_arch_class_name,
+                    configuration_manager.network_arch_init_kwargs,
+                    configuration_manager.network_arch_init_kwargs_req_import,
+                    num_input_channels,
+                    plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
+                    enable_deep_supervision=False
+                )
+            else:
+                # Config exists but no custom network builder, use trainer class method
+                trainer_config_name = None  # Fall through to default behavior
+        except (ImportError, ValueError):
+            # Config not found or import failed, fall back to trainer class method
+            trainer_config_name = None  # Fall through to default behavior
+
+    # If no config or config has no custom network builder, use trainer class method
+    if trainer_config_name is None:
+        # After refactoring, trainer classes are in nnunetv2/training/trainer/ directory
+        # but we maintain backward compatibility by also checking nnunetv2/training/nnUNetTrainer.py
+        trainer_class = recursive_find_python_class(join(nnunetv2.__path__[0], "training"),
+                                                    trainer_name, 'nnunetv2.training')
+        if trainer_class is None:
+            raise RuntimeError(f'Unable to locate trainer class {trainer_name} in nnunetv2.training. '
+                              f'Please place it there (or in a submodule) and make sure it can be imported with '
+                              f'"from nnunetv2.training import {trainer_name}"')
+
+        network = trainer_class.build_network_architecture(
+            configuration_manager.network_arch_class_name,
+            configuration_manager.network_arch_init_kwargs,
+            configuration_manager.network_arch_init_kwargs_req_import,
+            num_input_channels,
+            plans_manager.get_label_manager(dataset_json).num_segmentation_heads,
+            enable_deep_supervision=False
+        )
 
     # Manual initialization
     predictor.plans_manager = plans_manager

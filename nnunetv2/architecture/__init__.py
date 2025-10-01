@@ -17,6 +17,10 @@ From config.py:
     - set_deep_supervision_enabled: Enable/disable deep supervision
     - plot_network_architecture: Visualize network architecture
 
+From custom/:
+    - DynamicKiUNet: Dynamic KiU-Net architecture with dual-branch encoder-decoder
+    - CRFB: Cross-Refinement Block for feature exchange between branches
+
 Usage:
 ------
 For training:
@@ -24,6 +28,7 @@ For training:
 
 For custom architectures:
     from nnunetv2.architecture import get_network_from_plans
+    from nnunetv2.architecture import DynamicKiUNet
 
 For network configuration:
     from nnunetv2.architecture import set_deep_supervision_enabled, _do_i_compile
@@ -32,6 +37,7 @@ For network configuration:
 from .builder import build_network_architecture
 from .instantiation import get_network_from_plans
 from .config import _do_i_compile, set_deep_supervision_enabled, plot_network_architecture
+from .custom import DynamicKiUNet, CRFB
 
 __all__ = [
     'build_network_architecture',
@@ -39,4 +45,6 @@ __all__ = [
     '_do_i_compile',
     'set_deep_supervision_enabled',
     'plot_network_architecture',
+    'DynamicKiUNet',
+    'CRFB',
 ]

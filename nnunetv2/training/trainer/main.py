@@ -34,9 +34,9 @@ class nnUNetTrainer(object):
         # complexity bad - so we broke this down into modules!
 
         self.trainer_config = trainer_config
-        self._setup_trainer_state(plans, configuration, fold, dataset_json, device)
+        self._setup_trainer_state(plans, configuration, fold, dataset_json, device, trainer_config)
 
-    def _setup_trainer_state(self, plans: dict, configuration: str, fold: int, dataset_json: dict, device):
+    def _setup_trainer_state(self, plans: dict, configuration: str, fold: int, dataset_json: dict, device, trainer_config=None):
         """
         Initialize all trainer state and configuration.
 
@@ -46,6 +46,7 @@ class nnUNetTrainer(object):
             fold: Fold number
             dataset_json: Dataset configuration
             device: Training device
+            trainer_config: Optional trainer configuration
         """
         # DDP setup
         self.is_ddp = dist.is_available() and dist.is_initialized()
@@ -61,6 +62,18 @@ class nnUNetTrainer(object):
             if self.device.type == 'cuda':
                 self.device = torch.device(type='cuda', index=0)
             print(f"Using device: {self.device}")
+
+        # Print trainer config information
+        if trainer_config is not None:
+            print(f"\n" + "=" * 70)
+            print(f"USING TRAINER CONFIG: {trainer_config.name}")
+            if trainer_config.description:
+                print(f"Description: {trainer_config.description}")
+            if trainer_config.num_epochs is not None:
+                print(f"Epochs: {trainer_config.num_epochs}")
+            if trainer_config.network_builder is not None:
+                print(f"Custom network: {trainer_config.network_builder.__name__}")
+            print("=" * 70 + "\n")
 
         # Store init arguments for checkpointing
         self.my_init_kwargs = {}
@@ -170,14 +183,28 @@ class nnUNetTrainer(object):
             self.num_input_channels = determine_num_input_channels(
                 self.plans_manager, self.configuration_manager, self.dataset_json)
 
-            self.network = build_network_architecture(
-                self.configuration_manager.network_arch_class_name,
-                self.configuration_manager.network_arch_init_kwargs,
-                self.configuration_manager.network_arch_init_kwargs_req_import,
-                self.num_input_channels,
-                self.label_manager.num_segmentation_heads,
-                self.enable_deep_supervision
-            ).to(self.device)
+            # Check if trainer_config has a custom network builder
+            if hasattr(self, 'trainer_config') and self.trainer_config is not None and \
+               self.trainer_config.network_builder is not None:
+                # Use custom network builder from config
+                self.network = self.trainer_config.network_builder(
+                    self.configuration_manager.network_arch_class_name,
+                    self.configuration_manager.network_arch_init_kwargs,
+                    self.configuration_manager.network_arch_init_kwargs_req_import,
+                    self.num_input_channels,
+                    self.label_manager.num_segmentation_heads,
+                    self.enable_deep_supervision
+                ).to(self.device)
+            else:
+                # Use default network builder
+                self.network = build_network_architecture(
+                    self.configuration_manager.network_arch_class_name,
+                    self.configuration_manager.network_arch_init_kwargs,
+                    self.configuration_manager.network_arch_init_kwargs_req_import,
+                    self.num_input_channels,
+                    self.label_manager.num_segmentation_heads,
+                    self.enable_deep_supervision
+                ).to(self.device)
 
             # Compile network for free speedup
             if _do_i_compile(self):
