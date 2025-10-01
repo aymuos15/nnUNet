@@ -5,7 +5,7 @@ set -e  # Exit on error
 
 # Default values
 DATASET=004
-GPU=1
+GPU=0
 RUN_PREPROCESS=false
 RUN_BASELINE=false
 RUN_KIUNET=false
