@@ -27,6 +27,8 @@ echo "=========================================="
 # Use kiunet_minimal config - dual-branch arch needs reduced features for 24GB GPU
 # Disable torch.compile to save memory
 export nnUNet_compile="false"
+# Use cuda:1 device
+export CUDA_VISIBLE_DEVICES=1
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
 
 echo ""
