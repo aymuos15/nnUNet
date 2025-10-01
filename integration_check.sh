@@ -107,12 +107,11 @@ while [[ $# -gt 0 ]]; do
             RUN_UIUNET=true
             shift
             ;;
-        --no-clean)
         --region-dice)
             RUN_REGION_DICE=true
             shift
             ;;
-
+        --no-clean)
             CLEAN=false
             shift
             ;;
