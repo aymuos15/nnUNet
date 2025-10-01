@@ -250,7 +250,8 @@ PY
         echo -e "${GREEN}=========================================="
         echo "Step 2b: Train Baseline with Region Dice Loss (1 epoch test by default)"
         echo -e "==========================================${NC}"
-        nnUNetv2_train $DATASET 3d_fullres 0 -tr region_dice_loss -tc 1epochs || echo -e "${YELLOW}Region dice loss test failed (non-fatal)${NC}"
+        # RegionDiceLoss config defaults to 1 epoch (trainer default) unless modified in code
+        nnUNetv2_train $DATASET 3d_fullres 0 -tr region_dice_loss || echo -e "${YELLOW}Region dice loss test failed (non-fatal)${NC}"
         echo ""
         echo ""
     fi
