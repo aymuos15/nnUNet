@@ -21,6 +21,9 @@ import math
 
 def _upsample_like(x, size):
     """Upsample tensor to target size using trilinear interpolation."""
+    # If size is a tensor, extract spatial dimensions
+    if isinstance(size, torch.Tensor):
+        size = tuple(size.shape[2:])
     return F.interpolate(x, size=size, mode='trilinear', align_corners=False)
 
 
