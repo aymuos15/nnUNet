@@ -35,10 +35,8 @@ OPTIONS:
     --baseline          Train baseline U-Net
     --kiunet            Train and predict with KiU-Net
     --uiunet            Train and predict with UIU-Net
+    --region-dice       Train baseline with region_dice_loss (1 epoch quick test)
     --no-clean          Don't clean previous results before training
-
-38.    --region-dice       Train baseline U-Net with region_dice_loss TrainerConfig (1 epoch quick test)
-39.    --no-clean          Don't clean previous results before training
 EXAMPLES:
     # Run only UIU-Net test
     ${0##*/} --uiunet
@@ -54,6 +52,12 @@ EXAMPLES:
 
     # Run baseline and UIU-Net on dataset 005
     ${0##*/} --baseline --uiunet -d 005
+
+    # Run only Region Dice loss training (no standard baseline)
+    ${0##*/} --region-dice -d 004
+
+    # Run preprocessing + baseline + region dice (1 epoch) on GPU 0
+    ${0##*/} --preprocess --baseline --region-dice -g 0
 
 EOF
 }
