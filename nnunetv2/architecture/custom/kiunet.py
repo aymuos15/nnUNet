@@ -490,7 +490,8 @@ class DynamicKiUNet(nn.Module):
             unet_dec = self.unet_decoder[dec_idx](unet_dec)
 
             # Deep supervision
-            if self.deep_supervision and dec_idx < len(self.unet_deep_supervision_heads):
+            # Skip the last decoder stage (it will be used for the fused final output)
+            if self.deep_supervision and dec_idx < len(self.unet_decoder) - 1:
                 ds_out = self.unet_deep_supervision_heads[dec_idx](unet_dec)
                 deep_supervision_outputs.append(ds_out)
 

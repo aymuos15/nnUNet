@@ -16,7 +16,8 @@ echo ""
 echo "=========================================="
 echo "Step 2: Clean previous training results"
 echo "=========================================="
-rm -rf /home/localssk23/nnn/datasets/nnUNet_results/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres
+# Use nnUNet environment variables instead of hardcoded paths
+rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres"
 
 echo ""
 echo "=========================================="
@@ -31,8 +32,8 @@ echo "=========================================="
 echo "Step 4: Predict with DynamicKiUNet"
 echo "=========================================="
 # Predict with DynamicKiUNet (config auto-detected from checkpoint)
-nnUNetv2_predict -i /home/localssk23/nnn/datasets/raw/Dataset004_Hippocampus/imagesTs \
-                 -o /home/localssk23/nnn/datasets/nnUNet_results/kiunet \
+nnUNetv2_predict -i "${nnUNet_raw}/Dataset004_Hippocampus/imagesTs" \
+                 -o "${nnUNet_results}/kiunet" \
                  -d 004 \
                  -c 3d_fullres \
                  -f 0 \

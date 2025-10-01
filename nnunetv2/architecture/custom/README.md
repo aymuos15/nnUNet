@@ -63,7 +63,7 @@ This section explains memory-saving constraints and how to remove them if you ha
 **Current Behavior:**
 The Ki-Net encoder upsampling is currently limited to 2x the input size to prevent OOM errors with typical GPU memory (16-24GB).
 
-**Location:** `/home/localssk23/nnn/nnUNet/nnunetv2/architecture/custom/kiunet.py`, lines 438-452
+**Location:** `nnunetv2/architecture/custom/kiunet.py`, lines 438-452
 
 **Current Code:**
 ```python
@@ -112,7 +112,7 @@ CRFBs dynamically match spatial dimensions using interpolation based on actual f
 **Original Paper Behavior:**
 Uses hardcoded exponential scale factors (2^stage) for each CRFB level.
 
-**Location:** `/home/localssk23/nnn/nnUNet/nnunetv2/architecture/custom/kiunet.py`, CRFB class lines 68-116
+**Location:** `nnunetv2/architecture/custom/kiunet.py`, CRFB class lines 68-116
 
 **How to Modify:**
 In the `DynamicKiUNet.__init__` method (lines 280-290), pass fixed scale factors to each CRFB:
@@ -293,7 +293,7 @@ pool_type='max'  # Original KiU-Net behavior
 **Implementation details:**
 - When using `pool_type='max'` or `'avg'`, pooling layers are inserted before convolution blocks at each stage (except the first)
 - Convolution stride is automatically set to 1 when explicit pooling is used
-- See lines 210-226 in `/home/localssk23/nnn/nnUNet/nnunetv2/architecture/custom/kiunet.py`
+- See lines 210-226 in `nnunetv2/architecture/custom/kiunet.py`
 
 ---
 

@@ -75,7 +75,7 @@ Previous training used PlainConvUNet (wrong architecture). After the fix:
 
 ### Model Location
 ```
-/home/localssk23/nnn/datasets/nnUNet_results/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/
+${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres/fold_0/
 ```
 
 Note: Models are saved under the base trainer name (`nnUNetTrainer`) regardless of config used. The config (e.g., `kiunet`) is saved in the checkpoint and automatically detected during prediction.
