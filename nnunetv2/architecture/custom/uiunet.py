@@ -107,6 +107,90 @@ class ChannelAttention3D(nn.Module):
         return x * attention
 
 
+class AsymBiChaFuseReduce3D(nn.Module):
+    """
+    Asymmetric Bi-Channel Fusion and Reduction module.
+
+    This is the TRUE IC-A (Interactive Cross-Attention) module from UIU-Net paper.
+    Applied between encoder skip connections and decoder features at each stage.
+
+    Uses bidirectional multiplicative gating:
+    - Top-down: High-level features weight low-level features
+    - Bottom-up: Low-level features weight high-level features
+
+    Returns two feature maps that are concatenated before decoder processing.
+    """
+    def __init__(self, high_channels: int, low_channels: int,
+                 out_channels_low: int, out_channels_high: int,
+                 conv_op: Type[nn.Module], norm_op: Type[nn.Module],
+                 norm_op_kwargs: dict, nonlin: Type[nn.Module], nonlin_kwargs: dict):
+        super().__init__()
+
+        # Feature transformation for high-res input
+        self.feature_high = nn.Sequential(
+            conv_op(high_channels, high_channels, kernel_size=1, bias=False),
+            norm_op(high_channels, **norm_op_kwargs),
+            nonlin(**nonlin_kwargs)
+        )
+
+        # Top-down pathway: high-level → weights for low-level
+        self.topdown = nn.Sequential(
+            nn.AdaptiveAvgPool3d(1),
+            conv_op(high_channels, low_channels, kernel_size=1),
+            nn.Sigmoid()
+        )
+
+        # Bottom-up pathway: low-level → weights for high-level
+        # Uses spatial attention
+        self.bottomup = nn.Sequential(
+            conv_op(low_channels, 1, kernel_size=7, padding=3, bias=False),
+            nn.Sigmoid()
+        )
+
+        # Post-processing for low-level features
+        self.post_low = nn.Sequential(
+            conv_op(low_channels, out_channels_low, kernel_size=3, padding=1, bias=False),
+            norm_op(out_channels_low, **norm_op_kwargs),
+            nonlin(**nonlin_kwargs)
+        )
+
+        # Post-processing for high-level features
+        self.post_high = nn.Sequential(
+            conv_op(high_channels, out_channels_high, kernel_size=3, padding=1, bias=False),
+            norm_op(out_channels_high, **norm_op_kwargs),
+            nonlin(**nonlin_kwargs)
+        )
+
+    def forward(self, xh, xl):
+        """
+        Args:
+            xh: High-resolution/low-level features from encoder [B, C_high, D, H, W]
+            xl: Low-resolution/high-level features from decoder [B, C_low, D, H, W]
+
+        Returns:
+            (out1, out2): Two feature maps to be concatenated
+                out1: [B, out_channels_low, D, H, W]
+                out2: [B, out_channels_high, D, H, W]
+        """
+        # Transform high-res features
+        xh = self.feature_high(xh)
+
+        # Top-down weighting: high-level features generate weights for low-level
+        topdown_wei = self.topdown(xh)  # [B, C_low, 1, 1, 1]
+
+        # Bottom-up weighting: low-level features (modulated by top-down) generate weights
+        bottomup_wei = self.bottomup(xl * topdown_wei)  # [B, 1, D, H, W]
+
+        # Modulated features with multiplicative gating (factor of 2)
+        xs1 = 2 * xl * topdown_wei     # Low-level modulated by high-level weights
+        out1 = self.post_low(xs1)
+
+        xs2 = 2 * xh * bottomup_wei    # High-level modulated by low-level weights
+        out2 = self.post_high(xs2)
+
+        return out1, out2
+
+
 class InteractiveCrossAttention3D(nn.Module):
     """
     Interactive Cross-Attention module for fusing multi-scale side outputs.
@@ -494,6 +578,31 @@ class DynamicUIUNet3D(nn.Module):
             )
             self.decoder_stages.append(rsu)
 
+        # IC-A fusion modules (AsymBiChaFuseReduce) - between encoder and decoder
+        self.fusion_modules = nn.ModuleList()
+        for i in range(n_stages - 1):
+            # Decoder upsampled features come from lower stage
+            low_ch = features_per_stage[n_stages - 1 - i]  # From lower decoder stage
+            # Encoder skip features
+            high_ch = features_per_stage[n_stages - 2 - i]  # From encoder
+            # Output: two feature maps that will be concatenated
+            # Total after concat should = low_ch + high_ch to match decoder input
+            out_ch_low = low_ch    # For modulated low-level features
+            out_ch_high = high_ch  # For modulated high-level features
+
+            fusion = AsymBiChaFuseReduce3D(
+                high_channels=high_ch,
+                low_channels=low_ch,
+                out_channels_low=out_ch_low,
+                out_channels_high=out_ch_high,
+                conv_op=conv_op,
+                norm_op=norm_op,
+                norm_op_kwargs=norm_op_kwargs,
+                nonlin=nonlin,
+                nonlin_kwargs=nonlin_kwargs
+            )
+            self.fusion_modules.append(fusion)
+
         # Side output heads (for UIU-Net fusion)
         # Create heads for bottleneck + all decoder stages
         self.side_heads = nn.ModuleList()
@@ -556,12 +665,16 @@ class DynamicUIUNet3D(nn.Module):
         # === DECODER ===
         x_dec = encoder_features[-1]
         for i, decoder_stage in enumerate(self.decoder_stages):
-            # Concatenate with encoder skip connection at same resolution
+            # Get encoder skip connection
             skip_idx = self.n_stages - 2 - i
 
             # Upsample x_dec to match encoder feature's actual spatial size
             x_dec = _upsample_like(x_dec, encoder_features[skip_idx])
-            x_dec = torch.cat([x_dec, encoder_features[skip_idx]], dim=1)
+
+            # IC-A Fusion: Bidirectional multiplicative gating
+            # xh = high-res encoder features, xl = low-res decoder features
+            fusec1, fusec2 = self.fusion_modules[i](encoder_features[skip_idx], x_dec)
+            x_dec = torch.cat([fusec1, fusec2], dim=1)
 
             # Process through decoder RSU
             x_dec = decoder_stage(x_dec)
