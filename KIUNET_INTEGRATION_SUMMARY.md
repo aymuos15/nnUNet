@@ -20,7 +20,7 @@ Four configs registered:
 - **`kiunet`**: MaxPool downsampling, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (matches original paper)
 - **`kiunet_conv`**: Strided convolutions, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (faster alternative)
 - **`kiunet_minimal`**: batch_size=1, 3x3x3 kernels, 50% features [16,32,64,128], strided conv, 2 epochs (for 24GB GPUs, testing)
-- **`kiunet_large`**: batch_size=2, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs, production)
+- **`kiunet_large`**: batch_size=1, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs, production)
 
 ### 3. Trainer Integration
 **File:** `nnunetv2/training/trainer/main.py`
@@ -86,7 +86,7 @@ Note: Models are saved under the base trainer name (`nnUNetTrainer`) regardless 
 ### Training
 ```bash
 # For 24GB GPUs (RECOMMENDED for production)
-# Full features, 3x3x3 kernels, batch_size=2, 1000 epochs
+# Full features, 3x3x3 kernels, batch_size=1, 1000 epochs
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_large
 
 # With MaxPool (matches original paper) - requires >8GB GPU
@@ -204,7 +204,7 @@ The config used during training is automatically detected from the checkpoint.
 
 ### CUDA Out of Memory
 For 24GB GPUs (recommended):
-- Use `kiunet_large` for production (batch_size=2, full features, 1000 epochs)
+- Use `kiunet_large` for production (batch_size=1, full features, 1000 epochs)
 - Use `kiunet_minimal` for testing (batch_size=1, 50% features, 2 epochs)
 - Disable torch.compile if needed: `export nnUNet_compile="false"`
 

@@ -22,7 +22,7 @@ rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_
 
 echo ""
 echo "=========================================="
-echo "Step 3: Train DynamicKiUNet (1000 epochs, full features, batch_size=2)"
+echo "Step 3: Train DynamicKiUNet (1000 epochs, full features, batch_size=1)"
 echo "=========================================="
 # Use kiunet_large config optimized for 24GB GPUs
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_large
