@@ -1,20 +1,33 @@
-# Custom Architecture Integration Guide
+# Custom Architecture & Loss Integration Guide
 
-**nnU-Net with KiU-Net and UIU-Net Architectures**
+**nnU-Net with Custom Architectures and Loss Functions**
 
-This document provides comprehensive information about the custom segmentation architectures integrated into nnU-Net: **DynamicKiUNet** and **DynamicUIUNet3D**.
+This document provides comprehensive information about custom components integrated into nnU-Net:
+- **Architectures:** DynamicKiUNet, DynamicUIUNet3D
+- **Loss Functions:** Blob Dice Loss, Region Dice Loss
 
 ---
 
-## 🔍 Architecture Overview
+## 🔍 Overview
 
-### KiU-Net (Kite-Net)
+### Custom Architectures
+
+#### KiU-Net (Kite-Net)
 **Paper:** "KiU-Net: Towards Accurate Segmentation of Biomedical Images using Over-complete Representations" (MICCAI 2020)
 **Key Innovation:** Dual-branch architecture combining traditional U-Net (downsampling) with Ki-Net (upsampling), connected via Cross-Refinement Fusion Blocks (CRFB).
 
-### UIU-Net (U-Net in U-Net)
+#### UIU-Net (U-Net in U-Net)
 **Paper:** "UIU-Net: U-Net in U-Net for Infrared Small Object Detection" (TIP 2022)
 **Key Innovation:** Nested U-Net structure using RSU (Residual U-blocks) at each stage, with IC-A (Interactive Cross-Attention) fusion between encoder and decoder for uncertainty-inspired feature weighting.
+
+### Custom Loss Functions
+
+#### Blob Dice Loss
+**Reference:** https://github.com/neuronflow/blob_loss
+**Key Innovation:** Instance-aware segmentation via per-blob (connected component) Dice computation. Encourages accurate segmentation of individual objects rather than just foreground/background distinction.
+
+#### Region Dice Loss
+**Key Innovation:** Similar to blob loss but optimized for multi-class region-based segmentation with optional ignore labels.
 
 ---
 
@@ -110,7 +123,43 @@ nnUNetv2_train 004 3d_fullres 0 -tr uiunet
 - `uiunet` - Full RSU heights (7→6→5→4), full features [32,64,128,256], 1 epoch (>40GB GPU, testing only)
 - `uiunet_minimal` - Reduced RSU heights (5→4→3→2), 50% features [16,32,64,128], 5 epochs (24GB GPU) ⭐
 
-### Inference (Both Architectures)
+### Custom Loss Functions
+
+#### Blob Dice Loss Training
+
+```bash
+# Train with blob dice loss only (instance-aware segmentation)
+# Uses standard nnU-Net architecture with custom loss
+nnUNetv2_train 004 3d_fullres 0 -tr blob_dice_loss
+
+# Train with blob dice + cross-entropy combined loss
+nnUNetv2_train 004 3d_fullres 0 -tr blob_dice_ce_loss
+```
+
+**Available Blob Loss Configs:**
+- `blob_dice_loss` - Pure blob-wise Dice, 1 epoch (quick test) ⭐
+- `blob_dice_ce_loss` - Blob Dice + CE combined, 1 epoch (quick test)
+
+**When to use Blob Loss:**
+- ✅ Multiple separate instances per class (e.g., cell segmentation, tumor detection)
+- ✅ Need to segment individual objects accurately
+- ✅ Instance boundaries are important
+- ❌ Simple foreground/background segmentation (use standard Dice)
+- ❌ Continuous structures (use standard Dice or region Dice)
+
+#### Region Dice Loss Training
+
+```bash
+# Train with region-based dice loss
+nnUNetv2_train 004 3d_fullres 0 -tr region_dice_loss
+```
+
+**When to use Region Loss:**
+- ✅ Multi-class segmentation with complex topology
+- ✅ Optional ignore labels needed
+- ✅ Per-region performance more important than global Dice
+
+### Inference (Architectures and Loss Functions)
 
 ```bash
 # Config is automatically detected from checkpoint
@@ -121,7 +170,7 @@ nnUNetv2_predict -i INPUT_DIR -o OUTPUT_DIR \
 ### Integration Testing
 
 ```bash
-# Test all architectures
+# Test all (architectures + loss functions)
 ./integration_check.sh --all
 
 # Test only KiU-Net
@@ -130,8 +179,17 @@ nnUNetv2_predict -i INPUT_DIR -o OUTPUT_DIR \
 # Test only UIU-Net
 ./integration_check.sh --uiunet
 
+# Test only Blob Dice loss
+./integration_check.sh --blob-dice
+
+# Test only Region Dice loss
+./integration_check.sh --region-dice
+
 # Test both custom architectures
 ./integration_check.sh --kiunet --uiunet
+
+# Test custom losses
+./integration_check.sh --blob-dice --region-dice
 ```
 
 ---
@@ -529,11 +587,23 @@ nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
 export nnUNet_compile="false"
 nnUNetv2_train 004 3d_fullres 0 -tr uiunet_minimal
 
-# Predict (auto-detects architecture)
+# Train with Blob Dice loss (instance-aware)
+nnUNetv2_train 004 3d_fullres 0 -tr blob_dice_loss
+
+# Train with Region Dice loss
+nnUNetv2_train 004 3d_fullres 0 -tr region_dice_loss
+
+# Predict (auto-detects architecture/config)
 nnUNetv2_predict -i INPUT_DIR -o OUTPUT_DIR -d 004 -c 3d_fullres -f 0
 
-# Full integration test
+# Full integration test (all architectures and losses)
+./integration_check.sh --all
+
+# Test custom architectures only
 ./integration_check.sh --kiunet --uiunet
+
+# Test custom losses only
+./integration_check.sh --blob-dice --region-dice
 ```
 
 ---

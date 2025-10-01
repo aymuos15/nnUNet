@@ -11,6 +11,7 @@ RUN_BASELINE=false
 RUN_KIUNET=false
 RUN_UIUNET=false
 RUN_REGION_DICE=false
+RUN_BLOB_DICE=false
 CLEAN=true
 
 # Color codes for better readability
@@ -30,12 +31,13 @@ OPTIONS:
     -h, --help          Show this help message
     -d, --dataset N     Dataset ID (default: 004)
     -g, --gpu N         GPU device ID (default: 1)
-    --all               Run all steps (preprocess + baseline + kiunet + uiunet + region-dice)
+    --all               Run all steps (preprocess + baseline + kiunet + uiunet + region-dice + blob-dice)
     --preprocess        Run preprocessing step
     --baseline          Train baseline U-Net
     --kiunet            Train and predict with KiU-Net
     --uiunet            Train and predict with UIU-Net
     --region-dice       Train baseline with region_dice_loss (1 epoch quick test)
+    --blob-dice         Train baseline with blob_dice_loss (1 epoch quick test)
     --no-clean          Don't clean previous results before training
 EXAMPLES:
     # Run only UIU-Net test
@@ -56,8 +58,11 @@ EXAMPLES:
     # Run only Region Dice loss training (no standard baseline)
     ${0##*/} --region-dice -d 004
 
-    # Run preprocessing + baseline + region dice (1 epoch) on GPU 0
-    ${0##*/} --preprocess --baseline --region-dice -g 0
+    # Run only Blob Dice loss training
+    ${0##*/} --blob-dice -d 004
+
+    # Run preprocessing + baseline + region dice + blob dice on GPU 0
+    ${0##*/} --preprocess --baseline --region-dice --blob-dice -g 0
 
 EOF
 }
@@ -88,8 +93,9 @@ while [[ $# -gt 0 ]]; do
             RUN_BASELINE=true
             RUN_KIUNET=true
             RUN_UIUNET=true
-            shift
             RUN_REGION_DICE=true
+            RUN_BLOB_DICE=true
+            shift
             ;;
         --preprocess)
             RUN_PREPROCESS=true
@@ -109,6 +115,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --region-dice)
             RUN_REGION_DICE=true
+            shift
+            ;;
+        --blob-dice)
+            RUN_BLOB_DICE=true
             shift
             ;;
         --no-clean)
@@ -137,6 +147,7 @@ echo -e "Baseline U-Net: ${BLUE}$RUN_BASELINE${NC}"
 echo -e "KiU-Net: ${BLUE}$RUN_KIUNET${NC}"
 echo -e "UIU-Net: ${BLUE}$RUN_UIUNET${NC}"
 echo -e "Region Dice Baseline: ${BLUE}$RUN_REGION_DICE${NC}"
+echo -e "Blob Dice Baseline: ${BLUE}$RUN_BLOB_DICE${NC}"
 echo -e "Clean previous results: ${BLUE}$CLEAN${NC}"
 echo -e "${GREEN}==========================================${NC}\n"
 
@@ -256,5 +267,27 @@ PY
         echo ""
     fi
 fi
+
+# Blob Dice baseline
+if [ "$RUN_BLOB_DICE" = true ]; then
+    if python3 - <<'PY'
+try:
+    from nnunetv2.training.configs import get_config
+    get_config('blob_dice_loss')
+    print('HAS_BLOB_DICE_CONFIG')
+except Exception:
+    pass
+PY
+ then
+        echo -e "${GREEN}=========================================="
+        echo "Step 2c: Train Baseline with Blob Dice Loss (1 epoch test by default)"
+        echo -e "==========================================${NC}"
+        # BlobDiceLoss config defaults to 1 epoch for quick testing
+        nnUNetv2_train $DATASET 3d_fullres 0 -tr blob_dice_loss || echo -e "${YELLOW}Blob dice loss test failed (non-fatal)${NC}"
+        echo ""
+        echo ""
+    fi
+fi
+
 echo "Integration Check Complete!"
 echo -e "==========================================${NC}"

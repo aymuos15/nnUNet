@@ -8,6 +8,7 @@ from nnunetv2.training.losses.implementations.compound_losses import DC_and_BCE_
 from nnunetv2.training.losses.deep_supervision import DeepSupervisionWrapper
 from nnunetv2.training.losses.implementations.dice import MemoryEfficientSoftDiceLoss
 from nnunetv2.training.losses.implementations.region_dice import RegionDiceLoss
+from nnunetv2.training.losses.implementations.blob_dice import BlobDiceLoss, BlobDiceCELoss
 from nnunetv2.utilities.core.helpers import softmax_helper_dim1
 
 
@@ -120,3 +121,87 @@ REGION_DICE_LOSS_CONFIG = TrainerConfig(
 register_config(REGION_DICE_LOSS_CONFIG)
 
 register_config(DICE_CE_NO_SMOOTH_CONFIG)
+
+
+# Blob Dice loss (per-instance connected component Dice)
+def blob_dice_loss_builder(trainer_instance):
+    """
+    Build blob-wise Dice loss.
+
+    Computes Dice per connected component (blob) in ground truth.
+    Encourages accurate per-instance segmentation.
+    """
+    from nnunetv2.utilities.core.helpers import softmax_helper_dim1
+
+    if trainer_instance.label_manager.has_regions:
+        # Region-based: use sigmoid
+        apply_nonlin = torch.sigmoid
+    else:
+        # Standard multiclass: use softmax
+        apply_nonlin = softmax_helper_dim1
+
+    loss = BlobDiceLoss(
+        apply_nonlin=apply_nonlin,
+        include_background=False,
+        smooth=1e-6
+    )
+
+    if trainer_instance.enable_deep_supervision:
+        # Blob loss works best on full resolution (connected components need spatial context)
+        deep_supervision_scales = trainer_instance._get_deep_supervision_scales()
+        weights = np.zeros(len(deep_supervision_scales), dtype=float)
+        weights[0] = 1.0  # Only compute on highest resolution
+        loss = DeepSupervisionWrapper(loss, weights)
+
+    return loss
+
+
+BLOB_DICE_LOSS_CONFIG = TrainerConfig(
+    name="blob_dice_loss",
+    description="Blob-wise Dice loss - computes Dice per connected component for instance-aware segmentation (1 epoch test)",
+    loss_builder=blob_dice_loss_builder,
+    num_epochs=1  # Quick test by default
+)
+register_config(BLOB_DICE_LOSS_CONFIG)
+
+
+# Blob Dice + CE combined loss
+def blob_dice_ce_loss_builder(trainer_instance):
+    """
+    Build combined blob Dice + Cross-Entropy loss.
+
+    Blob Dice encourages per-instance accuracy, CE provides stable gradients.
+    """
+    from nnunetv2.utilities.core.helpers import softmax_helper_dim1
+
+    if trainer_instance.label_manager.has_regions:
+        # Region-based mode not recommended for this loss (CE needs multiclass)
+        raise ValueError("BlobDiceCELoss requires standard multiclass labels (has_regions=False)")
+
+    # Use softmax for dice component
+    apply_nonlin = softmax_helper_dim1
+
+    loss = BlobDiceCELoss(
+        blob_weight=1.0,
+        ce_weight=1.0,
+        apply_nonlin=apply_nonlin,
+        include_background=False
+    )
+
+    if trainer_instance.enable_deep_supervision:
+        # Apply to full resolution only (blob detection needs spatial context)
+        deep_supervision_scales = trainer_instance._get_deep_supervision_scales()
+        weights = np.zeros(len(deep_supervision_scales), dtype=float)
+        weights[0] = 1.0
+        loss = DeepSupervisionWrapper(loss, weights)
+
+    return loss
+
+
+BLOB_DICE_CE_LOSS_CONFIG = TrainerConfig(
+    name="blob_dice_ce_loss",
+    description="Combined Blob Dice + Cross-Entropy loss for instance-aware segmentation (1 epoch test)",
+    loss_builder=blob_dice_ce_loss_builder,
+    num_epochs=1  # Quick test by default
+)
+register_config(BLOB_DICE_CE_LOSS_CONFIG)
