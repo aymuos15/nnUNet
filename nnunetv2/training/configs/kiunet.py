@@ -84,7 +84,7 @@ def build_kiunet_minimal(
     """
     Network builder for DynamicKiUNet with reduced memory footprint.
 
-    Uses smaller kernel sizes (1x1x1), reduced feature channels, and strided convolutions.
+    Uses 3x3x3 kernels (same as default), reduced feature channels, and strided convolutions.
     """
     import pydoc
     architecture_kwargs = dict(**arch_init_kwargs)
@@ -92,15 +92,12 @@ def build_kiunet_minimal(
         if architecture_kwargs[key] is not None:
             architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
 
-    # Reduce kernel sizes to 1x1x1 for minimal memory usage
-    n_stages = architecture_kwargs['n_stages']
-    architecture_kwargs['kernel_sizes'] = [[1, 1, 1]] * n_stages
-
+    # Keep kernel sizes at 3x3x3 (no reduction needed for 24GB GPU)
     # Reduce feature channels by 50% (dual-branch uses ~2x memory)
     # Default is [32, 64, 128, 256], reduce to [16, 32, 64, 128]
     architecture_kwargs['features_per_stage'] = [f // 2 for f in architecture_kwargs['features_per_stage']]
 
-    # Build DynamicKiUNet with minimal kernel sizes and features
+    # Build DynamicKiUNet with reduced features but normal kernel sizes
     network = DynamicKiUNet(
         input_channels=num_input_channels,
         num_classes=num_output_channels,
@@ -128,13 +125,13 @@ KIUNET_CONV_CONFIG = TrainerConfig(
     network_builder=build_kiunet_conv,
 )
 
-# Minimal config for low-memory GPUs (< 4GB)
+# Minimal config for 24GB GPUs (reduced features)
 KIUNET_MINIMAL_CONFIG = TrainerConfig(
     name="kiunet_minimal",
-    description="DynamicKiUNet minimal memory (batch_size=1, 1x1x1 kernels, 50% features, strided conv, 2 epochs)",
+    description="DynamicKiUNet for 24GB GPU (batch_size=1, 3x3x3 kernels, 50% features, strided conv, 2 epochs)",
     num_epochs=2,
     batch_size=1,
-    network_builder=build_kiunet_minimal,  # Reduced kernel sizes and feature channels
+    network_builder=build_kiunet_minimal,  # Reduced feature channels only
 )
 
 # Optimized config for 24GB GPUs (production use)

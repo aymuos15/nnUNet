@@ -29,10 +29,11 @@ def predict_logits_from_preprocessed_data(predictor, data: torch.Tensor) -> torc
 
     for params in predictor.list_of_parameters:
         # Load model parameters
+        # Use strict=False to handle deep supervision heads mismatch between training and inference
         if not isinstance(predictor.network, OptimizedModule):
-            predictor.network.load_state_dict(params)
+            predictor.network.load_state_dict(params, strict=False)
         else:
-            predictor.network._orig_mod.load_state_dict(params)
+            predictor.network._orig_mod.load_state_dict(params, strict=False)
 
         # Perform prediction
         # Note: We move to CPU after each prediction to avoid OOM in ensemble predictions

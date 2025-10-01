@@ -16,16 +16,16 @@ echo ""
 echo "=========================================="
 echo "Step 2: Clean previous training results"
 echo "=========================================="
+# Clean old checkpoints to ensure fresh training with updated architecture
 # Use nnUNet environment variables instead of hardcoded paths
 rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_fullres"
 
 echo ""
 echo "=========================================="
-echo "Step 3: Train DynamicKiUNet (2 epochs, minimal memory)"
+echo "Step 3: Train DynamicKiUNet (1000 epochs, full features, batch_size=2)"
 echo "=========================================="
-# Disable torch.compile to save memory
-export nnUNet_compile="false"
-nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
+# Use kiunet_large config optimized for 24GB GPUs
+nnUNetv2_train 004 3d_fullres 0 -tr kiunet_large
 
 echo ""
 echo "=========================================="

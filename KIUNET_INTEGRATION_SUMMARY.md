@@ -19,8 +19,8 @@ Features implemented:
 Four configs registered:
 - **`kiunet`**: MaxPool downsampling, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (matches original paper)
 - **`kiunet_conv`**: Strided convolutions, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (faster alternative)
-- **`kiunet_minimal`**: batch_size=1, 1x1x1 kernels, 50% features [16,32,64,128], strided conv, 2 epochs (for GPUs < 4GB)
-- **`kiunet_large`**: batch_size=2, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs)
+- **`kiunet_minimal`**: batch_size=1, 3x3x3 kernels, 50% features [16,32,64,128], strided conv, 2 epochs (for 24GB GPUs, testing)
+- **`kiunet_large`**: batch_size=2, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs, production)
 
 ### 3. Trainer Integration
 **File:** `nnunetv2/training/trainer/main.py`
@@ -95,8 +95,8 @@ nnUNetv2_train 004 3d_fullres 0 -tr kiunet
 # With strided conv (faster) - requires >8GB GPU
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_conv
 
-# Minimal memory footprint - for GPUs < 4GB
-# Uses 1x1x1 kernels + 50% feature reduction [16,32,64,128]
+# For testing/development on 24GB GPU (faster with 50% features)
+# Uses 3x3x3 kernels + 50% feature reduction [16,32,64,128]
 export nnUNet_compile="false"  # Disable torch.compile
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
 ```
@@ -203,19 +203,18 @@ Models are saved under `nnUNetTrainer__nnUNetPlans__3d_fullres` (base trainer na
 The config used during training is automatically detected from the checkpoint.
 
 ### CUDA Out of Memory
-For GPUs < 4GB:
-1. Use `kiunet_minimal` config (batch_size=1, 1x1x1 kernels, 50% features, strided conv)
-2. Disable torch.compile: `export nnUNet_compile="false"`
-3. Note: Reduced kernels and features save memory but may affect performance
-4. DynamicKiUNet's dual-branch architecture is memory-intensive; may still OOM on very small GPUs
+For 24GB GPUs (recommended):
+- Use `kiunet_large` for production (batch_size=2, full features, 1000 epochs)
+- Use `kiunet_minimal` for testing (batch_size=1, 50% features, 2 epochs)
+- Disable torch.compile if needed: `export nnUNet_compile="false"`
 
-For GPUs 4-8GB:
+For GPUs 8-16GB:
 - Use `kiunet_conv` instead of `kiunet` (strided conv, 3x3x3 kernels)
 - Reduce batch size to 1
 
-For larger GPUs (>8GB):
-- Use full `kiunet` or `kiunet_conv` configs (3x3x3 kernels)
-- Consider removing the 2x upsampling limit (#4) - see README
+For GPUs < 8GB:
+- DynamicKiUNet's dual-branch architecture is memory-intensive
+- Consider using standard nnU-Net instead
 
 ### Config Not Found
 ```bash
