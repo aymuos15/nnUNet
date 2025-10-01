@@ -85,11 +85,14 @@ class ChannelAttention3D(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool3d(1)
         self.max_pool = nn.AdaptiveMaxPool3d(1)
 
+        # Ensure reduced channels is at least 1
+        reduced_channels = max(channels // reduction, 1)
+
         # Shared MLP
         self.fc = nn.Sequential(
-            nn.Conv3d(channels, channels // reduction, 1, bias=False),
+            nn.Conv3d(channels, reduced_channels, 1, bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv3d(channels // reduction, channels, 1, bias=False)
+            nn.Conv3d(reduced_channels, channels, 1, bias=False)
         )
         self.sigmoid = nn.Sigmoid()
 
