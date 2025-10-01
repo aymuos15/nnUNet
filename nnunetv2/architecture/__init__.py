@@ -20,6 +20,8 @@ From config.py:
 From custom/:
     - DynamicKiUNet: Dynamic KiU-Net architecture with dual-branch encoder-decoder
     - CRFB: Cross-Refinement Block for feature exchange between branches
+    - DynamicUIUNet3D: Dynamic UIU-Net architecture with nested RSU blocks
+    - DynamicRSU3D: Residual U-block with internal U-Net structure
 
 Usage:
 ------
@@ -37,7 +39,7 @@ For network configuration:
 from .builder import build_network_architecture
 from .instantiation import get_network_from_plans
 from .config import _do_i_compile, set_deep_supervision_enabled, plot_network_architecture
-from .custom import DynamicKiUNet, CRFB
+from .custom import DynamicKiUNet, CRFB, DynamicUIUNet3D, DynamicRSU3D
 
 __all__ = [
     'build_network_architecture',
@@ -47,4 +49,6 @@ __all__ = [
     'plot_network_architecture',
     'DynamicKiUNet',
     'CRFB',
+    'DynamicUIUNet3D',
+    'DynamicRSU3D',
 ]

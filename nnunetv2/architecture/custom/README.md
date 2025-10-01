@@ -28,6 +28,73 @@ A dynamic implementation of KiU-Net that combines two complementary pathways:
 
 ---
 
+### DynamicUIUNet3D
+
+A dynamic implementation of UIU-Net (U-Net in U-Net) with nested RSU blocks:
+
+- **Nested U-Net Structure**: Each encoder/decoder stage contains an RSU block with its own internal U-Net
+- **Multi-Scale Feature Extraction**: RSU blocks capture features at multiple scales within each stage
+- **Side Outputs**: Multiple prediction heads at different decoder stages
+- **Uncertainty-Inspired Fusion**: Combines all side outputs for final prediction
+
+**Key Features:**
+- Fully dynamic to adapt to nnU-Net's planning (stages, channels, kernel sizes, strides)
+- Configurable RSU heights (depth of internal U-Nets)
+- Multi-class segmentation support
+- Deep supervision compatible
+- Memory-optimized variants for constrained GPUs
+
+**Memory Requirements:**
+- **Nested U-Net structure is VERY memory-intensive** (U-Nets within U-Nets)
+- Each RSU block contains an internal U-Net with its own encoder-decoder
+- 24GB GPU: **MUST use `uiunet_minimal`** (50% features + reduced RSU heights)
+- 32GB+ GPU: Can try `uiunet` with full features (may still OOM depending on patch size)
+
+**Architecture Details:**
+- **RSU (Residual U-block)**: Core building block containing a nested U-Net structure
+  - Input → Conv → Internal U-Net (with downsampling) → Residual Connection
+  - RSU height controls internal U-Net depth (e.g., height=7 means 7 downsampling steps)
+  - Dilated RSU uses dilated convolutions instead of downsampling (for deeper stages)
+
+- **Encoder**:
+  - n_stages RSU blocks (e.g., 4-6 stages)
+  - RSU height decreases per stage (e.g., 7→6→5→4→4→4 or 5→4→3→3→3→3 for minimal)
+  - Last 2 stages use dilated RSU blocks
+
+- **Decoder**:
+  - Mirror encoder structure
+  - Concatenates upsampled features with encoder skip connections
+  - Each decoder stage has a side output head
+
+- **Fusion**:
+  - All side outputs upsampled to full resolution
+  - Concatenated and fused via 1x1 convolution
+  - Main output combines information from all scales
+
+**Deep Supervision Adaptation:**
+- Main output: Fused prediction from all side outputs (UIU-Net style)
+- Auxiliary outputs: Intermediate decoder features at native resolutions (nnU-Net style)
+- Format: `[fused_output, highest_res_aux, ..., lowest_res_aux]`
+
+**Usage Example:**
+```bash
+# For 24GB GPUs (REQUIRED - nested structure is very memory-intensive)
+export nnUNet_compile="false"
+export CUDA_VISIBLE_DEVICES=1
+nnUNetv2_train 004 3d_fullres 0 -tr uiunet_minimal
+
+# For >32GB GPUs (may still OOM)
+nnUNetv2_train 004 3d_fullres 0 -tr uiunet
+```
+
+**Configuration Variants:**
+- `uiunet`: Full RSU heights (7,6,5,4,4,4), full features - requires >32GB GPU
+- `uiunet_minimal`: Reduced RSU heights (5,4,3,3,3,3), 50% features - for 24GB GPU
+
+**Reference:** Based on [UIU-Net: U-Net in U-Net for Infrared Small Object Detection](https://github.com/danfenghong/IEEE_TIP_UIU-Net)
+
+---
+
 ## Architecture Fidelity
 
 This implementation closely matches the original KiU-Net paper with several key design decisions:
