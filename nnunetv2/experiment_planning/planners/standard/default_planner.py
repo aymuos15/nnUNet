@@ -3,20 +3,32 @@ from copy import deepcopy
 from typing import List, Union, Tuple
 
 import numpy as np
-import torch
 from batchgenerators.utilities.file_and_folder_operations import load_json, join, save_json, isfile, maybe_mkdir_p
 from dynamic_network_architectures.architectures.unet import PlainConvUNet
-from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
 from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.base.spacing_utils import (
+    determine_fullres_target_spacing,
+    determine_transpose
+)
+from nnunetv2.experiment_planning.planners.base.resampling_config import (
+    determine_normalization_scheme_and_whether_mask_is_used_for_norm,
+    determine_resampling,
+    determine_segmentation_softmax_export_fn
+)
+from nnunetv2.experiment_planning.planners.base.vram_estimation import (
+    static_estimate_VRAM_usage,
+    compute_batch_size
+)
+from nnunetv2.experiment_planning.planners.base.architecture_config import (
+    build_architecture_kwargs,
+    compute_features_per_stage
+)
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
-from nnunetv2.preprocessing.normalization.map_channel_name_to_normalization import get_normalization_scheme
-from nnunetv2.preprocessing.resampling.default_resampling import resample_data_or_seg_to_shape, compute_new_shape
+from nnunetv2.preprocessing.resampling.default_resampling import compute_new_shape
 from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
-from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
-from nnunetv2.architecture import get_network_from_plans
 from nnunetv2.utilities.core.json_export import recursive_fix_for_json_export
 from nnunetv2.data.dataset_io.utils import get_filenames_of_train_images_and_targets
 
@@ -100,15 +112,8 @@ class ExperimentPlanner(object):
         """
         Works for PlainConvUNet, ResidualEncoderUNet
         """
-        a = torch.get_num_threads()
-        torch.set_num_threads(get_allowed_n_proc_DA())
-        # print(f'instantiating network, patch size {patch_size}, pool op: {arch_kwargs["strides"]}')
-        net = get_network_from_plans(arch_class_name, arch_kwargs, arch_kwargs_req_import, input_channels,
-                                     output_channels,
-                                     allow_init=False)
-        ret = net.compute_conv_feature_map_size(patch_size)
-        torch.set_num_threads(a)
-        return ret
+        return static_estimate_VRAM_usage(patch_size, input_channels, output_channels,
+                                         arch_class_name, arch_kwargs, arch_kwargs_req_import)
 
     def determine_resampling(self, *args, **kwargs):
         """
@@ -118,21 +123,7 @@ class ExperimentPlanner(object):
         determine_resampling is called within get_plans_for_configuration to allow for different functions for each
         configuration
         """
-        resampling_data = resample_data_or_seg_to_shape
-        resampling_data_kwargs = {
-            "is_seg": False,
-            "order": 3,
-            "order_z": 0,
-            "force_separate_z": None,
-        }
-        resampling_seg = resample_data_or_seg_to_shape
-        resampling_seg_kwargs = {
-            "is_seg": True,
-            "order": 1,
-            "order_z": 0,
-            "force_separate_z": None,
-        }
-        return resampling_data, resampling_data_kwargs, resampling_seg, resampling_seg_kwargs
+        return determine_resampling(*args, **kwargs)
 
     def determine_segmentation_softmax_export_fn(self, *args, **kwargs):
         """
@@ -143,14 +134,7 @@ class ExperimentPlanner(object):
         functions for each configuration
 
         """
-        resampling_fn = resample_data_or_seg_to_shape
-        resampling_fn_kwargs = {
-            "is_seg": False,
-            "order": 1,
-            "order_z": 0,
-            "force_separate_z": None,
-        }
-        return resampling_fn, resampling_fn_kwargs
+        return determine_segmentation_softmax_export_fn(*args, **kwargs)
 
     def determine_fullres_target_spacing(self) -> np.ndarray:
         """
@@ -162,68 +146,25 @@ class ExperimentPlanner(object):
         resolution axis. Choosing the median here will result in bad interpolation artifacts that can substantially
         impact performance (due to the low number of slices).
         """
-        if self.overwrite_target_spacing is not None:
-            return np.array(self.overwrite_target_spacing)
-
-        spacings = np.vstack(self.dataset_fingerprint['spacings'])
-        sizes = self.dataset_fingerprint['shapes_after_crop']
-
-        target = np.percentile(spacings, 50, 0)
-
-        # todo sizes_after_resampling = [compute_new_shape(j, i, target) for i, j in zip(spacings, sizes)]
-
-        target_size = np.percentile(np.vstack(sizes), 50, 0)
-        # we need to identify datasets for which a different target spacing could be beneficial. These datasets have
-        # the following properties:
-        # - one axis which much lower resolution than the others
-        # - the lowres axis has much less voxels than the others
-        # - (the size in mm of the lowres axis is also reduced)
-        worst_spacing_axis = np.argmax(target)
-        other_axes = [i for i in range(len(target)) if i != worst_spacing_axis]
-        other_spacings = [target[i] for i in other_axes]
-        other_sizes = [target_size[i] for i in other_axes]
-
-        has_aniso_spacing = target[worst_spacing_axis] > (self.anisotropy_threshold * max(other_spacings))
-        has_aniso_voxels = target_size[worst_spacing_axis] * self.anisotropy_threshold < min(other_sizes)
-
-        if has_aniso_spacing and has_aniso_voxels:
-            spacings_of_that_axis = spacings[:, worst_spacing_axis]
-            target_spacing_of_that_axis = np.percentile(spacings_of_that_axis, 10)
-            # don't let the spacing of that axis get higher than the other axes
-            if target_spacing_of_that_axis < max(other_spacings):
-                target_spacing_of_that_axis = max(max(other_spacings), target_spacing_of_that_axis) + 1e-5
-            target[worst_spacing_axis] = target_spacing_of_that_axis
-        return target
+        return determine_fullres_target_spacing(
+            self.dataset_fingerprint,
+            self.anisotropy_threshold,
+            self.overwrite_target_spacing
+        )
 
     def determine_normalization_scheme_and_whether_mask_is_used_for_norm(self) -> Tuple[List[str], List[bool]]:
-        if 'channel_names' not in self.dataset_json.keys():
-            print('WARNING: "modalities" should be renamed to "channel_names" in dataset.json. This will be '
-                  'enforced soon!')
-        modalities = self.dataset_json['channel_names'] if 'channel_names' in self.dataset_json.keys() else \
-            self.dataset_json['modality']
-        normalization_schemes = [get_normalization_scheme(m) for m in modalities.values()]
-        if self.dataset_fingerprint['median_relative_size_after_cropping'] < (3 / 4.):
-            use_nonzero_mask_for_norm = [i.leaves_pixels_outside_mask_at_zero_if_use_mask_for_norm_is_true for i in
-                                         normalization_schemes]
-        else:
-            use_nonzero_mask_for_norm = [False] * len(normalization_schemes)
-            assert all([i in (True, False) for i in use_nonzero_mask_for_norm]), 'use_nonzero_mask_for_norm must be ' \
-                                                                                 'True or False and cannot be None'
-        normalization_schemes = [i.__name__ for i in normalization_schemes]
-        return normalization_schemes, use_nonzero_mask_for_norm
+        return determine_normalization_scheme_and_whether_mask_is_used_for_norm(
+            self.dataset_json,
+            self.dataset_fingerprint
+        )
 
     def determine_transpose(self):
-        if self.suppress_transpose:
-            return [0, 1, 2], [0, 1, 2]
-
-        # todo we should use shapes for that as well. Not quite sure how yet
-        target_spacing = self.determine_fullres_target_spacing()
-
-        max_spacing_axis = np.argmax(target_spacing)
-        remaining_axes = [i for i in list(range(3)) if i != max_spacing_axis]
-        transpose_forward = [max_spacing_axis] + remaining_axes
-        transpose_backward = [np.argwhere(np.array(transpose_forward) == i)[0][0] for i in range(3)]
-        return transpose_forward, transpose_backward
+        return determine_transpose(
+            self.dataset_fingerprint,
+            self.anisotropy_threshold,
+            self.suppress_transpose,
+            self.overwrite_target_spacing
+        )
 
     def get_plans_for_configuration(self,
                                     spacing: Union[np.ndarray, Tuple[float, ...], List[float]],
@@ -231,10 +172,6 @@ class ExperimentPlanner(object):
                                     data_identifier: str,
                                     approximate_n_voxels_dataset: float,
                                     _cache: dict) -> dict:
-        def _features_per_stage(num_stages, max_num_features) -> Tuple[int, ...]:
-            return tuple([min(max_num_features, self.UNet_base_num_features * 2 ** i) for
-                          i in range(num_stages)])
-
         def _keygen(patch_size, strides):
             return str(patch_size) + '_' + str(strides)
 
@@ -275,27 +212,17 @@ class ExperimentPlanner(object):
                                                              999999)
         num_stages = len(pool_op_kernel_sizes)
 
-        norm = get_matching_instancenorm(unet_conv_op)
-        architecture_kwargs = {
-            'network_class_name': self.UNet_class.__module__ + '.' + self.UNet_class.__name__,
-            'arch_kwargs': {
-                'n_stages': num_stages,
-                'features_per_stage': _features_per_stage(num_stages, max_num_features),
-                'conv_op': unet_conv_op.__module__ + '.' + unet_conv_op.__name__,
-                'kernel_sizes': conv_kernel_sizes,
-                'strides': pool_op_kernel_sizes,
-                'n_conv_per_stage': self.UNet_blocks_per_stage_encoder[:num_stages],
-                'n_conv_per_stage_decoder': self.UNet_blocks_per_stage_decoder[:num_stages - 1],
-                'conv_bias': True,
-                'norm_op': norm.__module__ + '.' + norm.__name__,
-                'norm_op_kwargs': {'eps': 1e-5, 'affine': True},
-                'dropout_op': None,
-                'dropout_op_kwargs': None,
-                'nonlin': 'torch.nn.LeakyReLU',
-                'nonlin_kwargs': {'inplace': True},
-            },
-            '_kw_requires_import': ('conv_op', 'norm_op', 'dropout_op', 'nonlin'),
-        }
+        architecture_kwargs = build_architecture_kwargs(
+            spacing,
+            num_stages,
+            pool_op_kernel_sizes,
+            conv_kernel_sizes,
+            max_num_features,
+            self.UNet_class,
+            self.UNet_blocks_per_stage_encoder,
+            self.UNet_blocks_per_stage_decoder,
+            self.UNet_base_num_features
+        )
 
         # now estimate vram consumption
         if _keygen(patch_size, pool_op_kernel_sizes) in _cache.keys():
@@ -350,7 +277,7 @@ class ExperimentPlanner(object):
                 'n_stages': num_stages,
                 'kernel_sizes': conv_kernel_sizes,
                 'strides': pool_op_kernel_sizes,
-                'features_per_stage': _features_per_stage(num_stages, max_num_features),
+                'features_per_stage': compute_features_per_stage(num_stages, max_num_features, self.UNet_base_num_features),
                 'n_conv_per_stage': self.UNet_blocks_per_stage_encoder[:num_stages],
                 'n_conv_per_stage_decoder': self.UNet_blocks_per_stage_decoder[:num_stages - 1],
             })
@@ -369,13 +296,18 @@ class ExperimentPlanner(object):
 
         # alright now let's determine the batch size. This will give self.UNet_min_batch_size if the while loop was
         # executed. If not, additional vram headroom is used to increase batch size
-        batch_size = round((reference / estimate) * ref_bs)
-
-        # we need to cap the batch size to cover at most 5% of the entire dataset. Overfitting precaution. We cannot
-        # go smaller than self.UNet_min_batch_size though
-        bs_corresponding_to_5_percent = round(
-            approximate_n_voxels_dataset * self.max_dataset_covered / np.prod(patch_size, dtype=np.float64))
-        batch_size = max(min(batch_size, bs_corresponding_to_5_percent), self.UNet_min_batch_size)
+        reference_val = self.UNet_reference_val_2d if len(spacing) == 2 else self.UNet_reference_val_3d
+        batch_size = compute_batch_size(
+            estimate,
+            reference_val,
+            ref_bs,
+            self.UNet_vram_target_GB,
+            self.UNet_reference_val_corresp_GB,
+            self.UNet_min_batch_size,
+            patch_size,
+            approximate_n_voxels_dataset,
+            self.max_dataset_covered
+        )
 
         resampling_data, resampling_data_kwargs, resampling_seg, resampling_seg_kwargs = self.determine_resampling()
         resampling_softmax, resampling_softmax_kwargs = self.determine_segmentation_softmax_export_fn()
