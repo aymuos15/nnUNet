@@ -204,14 +204,15 @@ class DynamicRSU3D(nn.Module):
                 # Downsample and recurse (if not dilated and not at bottom)
                 if not self.dilated and height < self.height - 1:
                     x2 = unet(self.downsample(x1), height + 1)
+                    # Upsample x2 to match x1's spatial size before concatenation
+                    x2 = _upsample_like(x2, x1)
                 else:
                     x2 = unet(x1, height + 1)
 
-                # Decoder path
+                # Decoder path - concatenate and process
                 x = getattr(self, f'rebnconv{height}d')(torch.cat((x2, x1), 1))
 
-                # Upsample (if not dilated and not at top)
-                return _upsample_like(x, sizes[height - 1]) if not self.dilated and height > 1 else x
+                return x
             else:
                 # Bottleneck
                 return getattr(self, f'rebnconv{height}')(x)
