@@ -567,9 +567,9 @@ class DynamicUIUNet3D(nn.Module):
             side_out_upsampled = _upsample_like(side_out, input_size)
             side_outputs.append(side_out_upsampled)
 
-            # Collect for deep supervision (keep at native resolution)
-            # Skip the last decoder stage (full resolution) - it's only for the fused main output
-            if self.deep_supervision and i < len(self.decoder_stages) - 1:
+            # Collect for deep supervision at native resolution
+            # nnU-Net expects outputs at progressively lower resolutions
+            if self.deep_supervision:
                 deep_supervision_outputs.append(side_out)
 
         # === FUSION ===
@@ -581,9 +581,10 @@ class DynamicUIUNet3D(nn.Module):
 
         # === RETURN ===
         if self.deep_supervision:
-            # Original UIU-Net approach: supervise ALL outputs
-            # Return: [d0 (fused), d1, d2, d3, d4, d5, d6 (side outputs)]
-            # All at full resolution for uniform supervision
-            return [fused_output] + side_outputs
+            # Hybrid approach for nnU-Net compatibility:
+            # - Main output: fused prediction at full resolution
+            # - Auxiliary outputs: native resolution (progressively lower)
+            # Deep supervision outputs are in decoder order, reverse for nnU-Net (highest res first)
+            return [fused_output] + deep_supervision_outputs[::-1]
         else:
             return fused_output
