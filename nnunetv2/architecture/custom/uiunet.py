@@ -569,7 +569,8 @@ class DynamicUIUNet3D(nn.Module):
 
             # Collect for deep supervision at native resolution
             # nnU-Net expects outputs at progressively lower resolutions
-            if self.deep_supervision:
+            # Skip the last decoder stage (full resolution) - it's for fusion only
+            if self.deep_supervision and i < len(self.decoder_stages) - 1:
                 deep_supervision_outputs.append(side_out)
 
         # === FUSION ===
