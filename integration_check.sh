@@ -10,6 +10,7 @@ RUN_PREPROCESS=false
 RUN_BASELINE=false
 RUN_KIUNET=false
 RUN_UIUNET=false
+RUN_REGION_DICE=false
 CLEAN=true
 
 # Color codes for better readability
@@ -29,13 +30,15 @@ OPTIONS:
     -h, --help          Show this help message
     -d, --dataset N     Dataset ID (default: 004)
     -g, --gpu N         GPU device ID (default: 1)
-    --all               Run all steps (preprocess + baseline + kiunet + uiunet)
+    --all               Run all steps (preprocess + baseline + kiunet + uiunet + region-dice)
     --preprocess        Run preprocessing step
     --baseline          Train baseline U-Net
     --kiunet            Train and predict with KiU-Net
     --uiunet            Train and predict with UIU-Net
     --no-clean          Don't clean previous results before training
 
+38.    --region-dice       Train baseline U-Net with region_dice_loss TrainerConfig (1 epoch quick test)
+39.    --no-clean          Don't clean previous results before training
 EXAMPLES:
     # Run only UIU-Net test
     ${0##*/} --uiunet
@@ -82,6 +85,7 @@ while [[ $# -gt 0 ]]; do
             RUN_KIUNET=true
             RUN_UIUNET=true
             shift
+            RUN_REGION_DICE=true
             ;;
         --preprocess)
             RUN_PREPROCESS=true
@@ -100,6 +104,11 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --no-clean)
+        --region-dice)
+            RUN_REGION_DICE=true
+            shift
+            ;;
+
             CLEAN=false
             shift
             ;;
@@ -124,6 +133,7 @@ echo -e "Preprocess: ${BLUE}$RUN_PREPROCESS${NC}"
 echo -e "Baseline U-Net: ${BLUE}$RUN_BASELINE${NC}"
 echo -e "KiU-Net: ${BLUE}$RUN_KIUNET${NC}"
 echo -e "UIU-Net: ${BLUE}$RUN_UIUNET${NC}"
+echo -e "Region Dice Baseline: ${BLUE}$RUN_REGION_DICE${NC}"
 echo -e "Clean previous results: ${BLUE}$CLEAN${NC}"
 echo -e "${GREEN}==========================================${NC}\n"
 
@@ -222,5 +232,25 @@ if [ "$RUN_UIUNET" = true ]; then
 fi
 
 echo -e "${GREEN}=========================================="
+
+# Region Dice baseline (explicit option) OR (legacy: still run if baseline and flag set)
+if [ "$RUN_REGION_DICE" = true ]; then
+    if python3 - <<'PY'
+try:
+    from nnunetv2.training.configs import get_config
+    get_config('region_dice_loss')
+    print('HAS_REGION_DICE_CONFIG')
+except Exception:
+    pass
+PY
+ then
+        echo -e "${GREEN}=========================================="
+        echo "Step 2b: Train Baseline with Region Dice Loss (1 epoch test by default)"
+        echo -e "==========================================${NC}"
+        nnUNetv2_train $DATASET 3d_fullres 0 -tr region_dice_loss -tc 1epochs || echo -e "${YELLOW}Region dice loss test failed (non-fatal)${NC}"
+        echo ""
+        echo ""
+    fi
+fi
 echo "Integration Check Complete!"
 echo -e "==========================================${NC}"

@@ -10,6 +10,7 @@ This module contains the actual loss function implementations:
 from .dice import SoftDiceLoss, MemoryEfficientSoftDiceLoss
 from .robust_ce_loss import RobustCrossEntropyLoss, TopKLoss
 from .compound_losses import DC_and_CE_loss, DC_and_BCE_loss
+from .region_dice import RegionDiceLoss
 
 __all__ = [
     'SoftDiceLoss',
@@ -17,5 +18,6 @@ __all__ = [
     'RobustCrossEntropyLoss',
     'TopKLoss',
     'DC_and_CE_loss',
-    'DC_and_BCE_loss'
+    'DC_and_BCE_loss',
+    'RegionDiceLoss'
 ]
