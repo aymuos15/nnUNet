@@ -46,6 +46,115 @@ def _size_map(x, height):
     return sizes
 
 
+class SpatialAttention3D(nn.Module):
+    """
+    3D Spatial attention module.
+
+    Learns spatial importance by aggregating channel information via
+    max and average pooling, then applying a convolution to generate
+    attention weights.
+    """
+    def __init__(self, kernel_size: int = 7):
+        super().__init__()
+        padding = (kernel_size - 1) // 2
+        self.conv = nn.Conv3d(2, 1, kernel_size=kernel_size, padding=padding, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # Aggregate across channels
+        max_pool = torch.max(x, dim=1, keepdim=True)[0]
+        avg_pool = torch.mean(x, dim=1, keepdim=True)
+
+        # Concatenate and generate attention
+        attention = torch.cat([max_pool, avg_pool], dim=1)
+        attention = self.conv(attention)
+        attention = self.sigmoid(attention)
+
+        return x * attention
+
+
+class ChannelAttention3D(nn.Module):
+    """
+    3D Channel attention module.
+
+    Learns channel importance using global context via adaptive pooling
+    and fully connected layers.
+    """
+    def __init__(self, channels: int, reduction: int = 16):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
+        self.max_pool = nn.AdaptiveMaxPool3d(1)
+
+        # Shared MLP
+        self.fc = nn.Sequential(
+            nn.Conv3d(channels, channels // reduction, 1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv3d(channels // reduction, channels, 1, bias=False)
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # Average and max pooling
+        avg_out = self.fc(self.avg_pool(x))
+        max_out = self.fc(self.max_pool(x))
+
+        # Combine and generate attention
+        attention = self.sigmoid(avg_out + max_out)
+
+        return x * attention
+
+
+class InteractiveCrossAttention3D(nn.Module):
+    """
+    Interactive Cross-Attention module for fusing multi-scale side outputs.
+
+    Based on UIU-Net's IC-A module, this applies spatial and channel attention
+    to allow interactive feature refinement before fusion.
+    """
+    def __init__(self, in_channels: int, out_channels: int):
+        super().__init__()
+
+        # Channel reduction
+        self.reduce = nn.Sequential(
+            nn.Conv3d(in_channels, out_channels, kernel_size=1, bias=False),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+
+        # Attention modules
+        self.channel_attention = ChannelAttention3D(out_channels)
+        self.spatial_attention = SpatialAttention3D(kernel_size=7)
+
+        # Final refinement
+        self.refine = nn.Sequential(
+            nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, x):
+        """
+        Args:
+            x: Concatenated side outputs [B, C_total, D, H, W]
+
+        Returns:
+            Refined fused features [B, C_out, D, H, W]
+        """
+        # Reduce channels
+        x = self.reduce(x)
+
+        # Apply channel attention
+        x = self.channel_attention(x)
+
+        # Apply spatial attention
+        x = self.spatial_attention(x)
+
+        # Final refinement
+        x = self.refine(x)
+
+        return x
+
+
 class REBNCONV3D(nn.Module):
     """
     Basic convolutional block: Conv3D → Norm → Activation.
@@ -393,8 +502,14 @@ class DynamicUIUNet3D(nn.Module):
             self.side_heads.append(conv_op(out_ch, num_classes, 3, padding=1, bias=True))
 
         # Fusion layer (UIU-Net's innovation)
-        # Concatenates all side outputs → 1x1 conv → final prediction
-        self.fusion = conv_op(n_stages * num_classes, num_classes, 1, bias=True)
+        # Interactive Cross-Attention fusion for multi-scale side outputs
+        self.fusion = InteractiveCrossAttention3D(
+            in_channels=n_stages * num_classes,
+            out_channels=num_classes
+        )
+
+        # Final output layer
+        self.output_conv = conv_op(num_classes, num_classes, 1, bias=True)
 
     def forward(self, x):
         """
@@ -455,15 +570,17 @@ class DynamicUIUNet3D(nn.Module):
                 deep_supervision_outputs.append(side_out)
 
         # === FUSION ===
-        # UIU-Net's key innovation: fuse all side outputs
+        # UIU-Net's key innovation: fuse all side outputs with attention
         side_outputs.reverse()  # Order: highest res → lowest res
         fused_sides = torch.cat(side_outputs, dim=1)
-        fused_output = self.fusion(fused_sides)
+        fused_features = self.fusion(fused_sides)  # Apply attention fusion
+        fused_output = self.output_conv(fused_features)  # Final prediction
 
         # === RETURN ===
         if self.deep_supervision:
-            # Return: [fused_output, highest_res_aux, ..., lowest_res_aux]
-            # Reverse deep_supervision_outputs so highest res is first
-            return [fused_output] + deep_supervision_outputs[::-1]
+            # Original UIU-Net approach: supervise ALL outputs
+            # Return: [d0 (fused), d1, d2, d3, d4, d5, d6 (side outputs)]
+            # All at full resolution for uniform supervision
+            return [fused_output] + side_outputs
         else:
             return fused_output
