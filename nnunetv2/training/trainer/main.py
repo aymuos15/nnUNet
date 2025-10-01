@@ -26,13 +26,43 @@ from nnunetv2.data.dataset import infer_dataset_class
 
 
 class nnUNetTrainer(object):
+    """
+    Main trainer class for nnU-Net models.
+
+    Orchestrates the complete training process: data loading, network initialization,
+    training loop with augmentation, validation, checkpointing, and logging. The trainer
+    is designed to be modular and extensible through TrainerConfig.
+
+    The training process follows these stages:
+    1. Setup: Initialize network, optimizer, data loaders
+    2. Training: Iterate through epochs with on-the-fly augmentation
+    3. Validation: Periodic sliding window inference on validation set
+    4. Checkpointing: Save best and periodic checkpoints
+    5. Finalization: Export final model and validation predictions
+
+    Args:
+        plans: Training plans dictionary (from nnUNetPlans.json)
+        configuration: Configuration name ('2d', '3d_fullres', '3d_lowres', '3d_cascade_fullres')
+        fold: Cross-validation fold number (0-4) or 'all'
+        dataset_json: Dataset metadata (from dataset.json)
+        device: Training device (cuda, cpu, or mps)
+        trainer_config: Optional custom configuration for architecture, loss, epochs, etc.
+
+    Attributes:
+        network: The neural network model
+        optimizer: Optimizer (SGD with momentum)
+        lr_scheduler: Learning rate scheduler (polynomial decay)
+        loss: Loss function (Dice + CE by default)
+        dataloader_train: Training data loader with augmentation
+        dataloader_val: Validation data loader
+        
+    Example:
+        >>> trainer = nnUNetTrainer(plans, '3d_fullres', 0, dataset_json)
+        >>> trainer.run_training()
+    """
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda'),
                  trainer_config: Optional[TrainerConfig] = None):
-        # From https://grugbrain.dev/. Worth a read ya big brains ;-)
-        # apex predator of grug is complexity
-        # complexity bad - so we broke this down into modules!
-
         self.trainer_config = trainer_config
         self._setup_trainer_state(plans, configuration, fold, dataset_json, device, trainer_config)
 

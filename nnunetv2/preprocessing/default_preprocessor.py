@@ -36,11 +36,28 @@ from nnunetv2.data.dataset_io.utils import get_filenames_of_train_images_and_tar
 
 
 class DefaultPreprocessor(object):
+    """
+    Default preprocessing pipeline for nnU-Net.
+
+    Applies the following operations to each training case:
+    1. Transpose axes according to plans
+    2. Crop to nonzero (remove unnecessary background)
+    3. Resample to target spacing
+    4. Normalize intensities (modality-specific)
+    5. Sample foreground locations for oversampling
+
+    The preprocessor operates on individual cases and is typically called in
+    parallel across all training cases.
+
+    Args:
+        verbose: Enable verbose output for debugging
+
+    Note:
+        All configuration (target spacing, normalization scheme, etc.) comes
+        from the plans and is provided when run() is called.
+    """
     def __init__(self, verbose: bool = True):
         self.verbose = verbose
-        """
-        Everything we need is in the plans. Those are given when run() is called
-        """
 
     def run_case_npy(self, data: np.ndarray, seg: Union[np.ndarray, None], properties: dict,
                      plans_manager: PlansManager, configuration_manager: ConfigurationManager,

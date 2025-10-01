@@ -12,7 +12,25 @@ def plan_experiment_dataset(dataset_id: int,
                             overwrite_target_spacing: Optional[Tuple[float, ...]] = None,
                             overwrite_plans_name: Optional[str] = None) -> Tuple[dict, str]:
     """
-    overwrite_target_spacing ONLY applies to 3d_fullres and 3d_cascade fullres!
+    Generate training plans for a single dataset.
+
+    Creates nnU-Net configurations (2D, 3D full-res, 3D cascade) by analyzing the
+    dataset fingerprint and applying rule-based heuristics for preprocessing,
+    architecture, and training parameters.
+
+    Args:
+        dataset_id: Dataset ID (from DatasetXXX_Name)
+        experiment_planner_class: Planner class to use for plan generation
+        gpu_memory_target_in_gb: Target GPU memory in GB (affects patch size and batch size)
+        preprocess_class_name: Name of preprocessor class to use
+        overwrite_target_spacing: Override automatic spacing determination (3d_fullres and 3d_cascade only)
+        overwrite_plans_name: Custom name for the generated plans file
+
+    Returns:
+        Tuple of (plans dictionary, plans identifier string)
+
+    Note:
+        overwrite_target_spacing only affects 3d_fullres and 3d_cascade_fullres configurations.
     """
     kwargs = {}
     if overwrite_plans_name is not None:
@@ -36,7 +54,25 @@ def plan_experiments(dataset_ids: List[int], experiment_planner_class_name: str 
                      overwrite_target_spacing: Optional[Tuple[float, ...]] = None,
                      overwrite_plans_name: Optional[str] = None):
     """
-    overwrite_target_spacing ONLY applies to 3d_fullres and 3d_cascade fullres!
+    Generate training plans for multiple datasets.
+
+    Batch processing version of plan_experiment_dataset. Dynamically loads the
+    specified planner class and applies it to each dataset.
+
+    Args:
+        dataset_ids: List of dataset IDs to process
+        experiment_planner_class_name: Name of planner class (must be findable in experiment_planning module)
+        gpu_memory_target_in_gb: Target GPU memory in GB
+        preprocess_class_name: Name of preprocessor class
+        overwrite_target_spacing: Override automatic spacing (3d_fullres and 3d_cascade only)
+        overwrite_plans_name: Custom plans file name
+
+    Returns:
+        Plans identifier string from the last processed dataset
+
+    Note:
+        Using 'ExperimentPlanner' will show a warning recommending ResEncUNet presets.
+        overwrite_target_spacing only affects 3d_fullres and 3d_cascade_fullres configurations.
     """
     if experiment_planner_class_name == 'ExperimentPlanner':
         print("\n############################\n"

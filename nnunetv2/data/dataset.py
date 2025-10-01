@@ -1,3 +1,22 @@
+"""
+Dataset classes for nnU-Net training and inference.
+
+This module provides dataset abstractions for loading preprocessed training data.
+Multiple storage backends are supported (NumPy, Blosc2) with optimizations for
+memory efficiency and I/O speed.
+
+Classes:
+    nnUNetBaseDataset: Abstract base class defining the dataset interface
+    nnUNetDatasetNumpy: NumPy-based dataset (legacy, less efficient)
+    nnUNetDatasetBlosc2: Blosc2-based dataset (default, recommended)
+
+The datasets handle:
+- Loading preprocessed images and segmentations
+- Memory-mapped access for large files
+- Optional cascade mode (loading predictions from previous stage)
+- Properties (spacing, cropping info, etc.)
+"""
+
 import os
 import warnings
 from abc import ABC, abstractmethod
@@ -19,7 +38,20 @@ import math
 
 class nnUNetBaseDataset(ABC):
     """
-    Defines the interface
+    Abstract base class for nnU-Net datasets.
+
+    Defines the interface for loading preprocessed training cases. Subclasses
+    implement specific storage backends (NumPy, Blosc2, etc.).
+
+    Args:
+        folder: Path to preprocessed dataset folder
+        identifiers: List of case identifiers (filenames without extension)
+        folder_with_segs_from_previous_stage: Path to cascade predictions (optional)
+
+    Attributes:
+        source_folder: Path to dataset folder
+        identifiers: List of case identifiers
+        folder_with_segs_from_previous_stage: Path to cascade predictions
     """
     def __init__(self, folder: str, identifiers: List[str] = None,
                  folder_with_segs_from_previous_stage: str = None):
