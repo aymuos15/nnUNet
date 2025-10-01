@@ -1,17 +1,24 @@
 import warnings
 
 import numpy as np
-from copy import deepcopy
 from typing import Union, List, Tuple
 
 from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
-from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 from nnunetv2.preprocessing.resampling.resample_torch import resample_torch_fornnunet
 from torch import nn
 
 from nnunetv2.experiment_planning.planners.standard.default_planner import ExperimentPlanner
 
 from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.base.architecture_config import (
+    build_architecture_kwargs,
+    compute_features_per_stage
+)
+from nnunetv2.experiment_planning.planners.base.patch_size_planning import (
+    compute_initial_patch_size,
+    reduce_patch_size_step
+)
+from nnunetv2.experiment_planning.planners.base.plan_builder import build_plan_dict
 
 
 class ResEncUNetPlanner(ExperimentPlanner):
@@ -48,10 +55,6 @@ class ResEncUNetPlanner(ExperimentPlanner):
                                     data_identifier: str,
                                     approximate_n_voxels_dataset: float,
                                     _cache: dict) -> dict:
-        def _features_per_stage(num_stages, max_num_features) -> Tuple[int, ...]:
-            return tuple([min(max_num_features, self.UNet_base_num_features * 2 ** i) for
-                          i in range(num_stages)])
-
         def _keygen(patch_size, strides):
             return str(patch_size) + '_' + str(strides)
 
@@ -60,29 +63,9 @@ class ResEncUNetPlanner(ExperimentPlanner):
                                  if 'channel_names' in self.dataset_json.keys()
                                  else self.dataset_json['modality'].keys())
         max_num_features = self.UNet_max_features_2d if len(spacing) == 2 else self.UNet_max_features_3d
-        unet_conv_op = convert_dim_to_conv_op(len(spacing))
 
-        # print(spacing, median_shape, approximate_n_voxels_dataset)
         # find an initial patch size
-        # we first use the spacing to get an aspect ratio
-        tmp = 1 / np.array(spacing)
-
-        # we then upscale it so that it initially is certainly larger than what we need (rescale to have the same
-        # volume as a patch of size 256 ** 3)
-        # this may need to be adapted when using absurdly large GPU memory targets. Increasing this now would not be
-        # ideal because large initial patch sizes increase computation time because more iterations in the while loop
-        # further down may be required.
-        if len(spacing) == 3:
-            initial_patch_size = [round(i) for i in tmp * (256 ** 3 / np.prod(tmp)) ** (1 / 3)]
-        elif len(spacing) == 2:
-            initial_patch_size = [round(i) for i in tmp * (2048 ** 2 / np.prod(tmp)) ** (1 / 2)]
-        else:
-            raise RuntimeError()
-
-        # clip initial patch size to median_shape. It makes little sense to have it be larger than that. Note that
-        # this is different from how nnU-Net v1 does it!
-        # todo patch size can still get too large because we pad the patch size to a multiple of 2**n
-        initial_patch_size = np.array([min(i, j) for i, j in zip(initial_patch_size, median_shape[:len(spacing)])])
+        initial_patch_size = compute_initial_patch_size(spacing, median_shape)
 
         # use that to get the network topology. Note that this changes the patch_size depending on the number of
         # pooling operations (must be divisible by 2**num_pool in each axis)
@@ -92,12 +75,16 @@ class ResEncUNetPlanner(ExperimentPlanner):
                                                              999999)
         num_stages = len(pool_op_kernel_sizes)
 
+        # ResEncUNet uses n_blocks_per_stage instead of n_conv_per_stage, so we build architecture kwargs manually
+        # rather than using the utility (which is designed for PlainConvUNet)
+        from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
+        unet_conv_op = convert_dim_to_conv_op(len(spacing))
         norm = get_matching_instancenorm(unet_conv_op)
         architecture_kwargs = {
             'network_class_name': self.UNet_class.__module__ + '.' + self.UNet_class.__name__,
             'arch_kwargs': {
                 'n_stages': num_stages,
-                'features_per_stage': _features_per_stage(num_stages, max_num_features),
+                'features_per_stage': compute_features_per_stage(num_stages, max_num_features, self.UNet_base_num_features),
                 'conv_op': unet_conv_op.__module__ + '.' + unet_conv_op.__name__,
                 'kernel_sizes': conv_kernel_sizes,
                 'strides': pool_op_kernel_sizes,
@@ -133,38 +120,17 @@ class ResEncUNetPlanner(ExperimentPlanner):
                     (self.UNet_vram_target_GB / self.UNet_reference_val_corresp_GB)
 
         while estimate > reference:
-            # print(patch_size)
-            # patch size seems to be too large, so we need to reduce it. Reduce the axis that currently violates the
-            # aspect ratio the most (that is the largest relative to median shape)
-            axis_to_be_reduced = np.argsort([i / j for i, j in zip(patch_size, median_shape[:len(spacing)])])[-1]
-
-            # we cannot simply reduce that axis by shape_must_be_divisible_by[axis_to_be_reduced] because this
-            # may cause us to skip some valid sizes, for example shape_must_be_divisible_by is 64 for a shape of 256.
-            # If we subtracted that we would end up with 192, skipping 224 which is also a valid patch size
-            # (224 / 2**5 = 7; 7 < 2 * self.UNet_featuremap_min_edge_length(4) so it's valid). So we need to first
-            # subtract shape_must_be_divisible_by, then recompute it and then subtract the
-            # recomputed shape_must_be_divisible_by. Annoying.
-            patch_size = list(patch_size)
-            tmp = deepcopy(patch_size)
-            tmp[axis_to_be_reduced] -= shape_must_be_divisible_by[axis_to_be_reduced]
-            _, _, _, _, shape_must_be_divisible_by = \
-                get_pool_and_conv_props(spacing, tmp,
-                                        self.UNet_featuremap_min_edge_length,
-                                        999999)
-            patch_size[axis_to_be_reduced] -= shape_must_be_divisible_by[axis_to_be_reduced]
-
-            # now recompute topology
-            network_num_pool_per_axis, pool_op_kernel_sizes, conv_kernel_sizes, patch_size, \
-            shape_must_be_divisible_by = get_pool_and_conv_props(spacing, patch_size,
-                                                                 self.UNet_featuremap_min_edge_length,
-                                                                 999999)
+            # Reduce patch size
+            patch_size, pool_op_kernel_sizes, conv_kernel_sizes, shape_must_be_divisible_by = \
+                reduce_patch_size_step(patch_size, spacing, median_shape, shape_must_be_divisible_by,
+                                      self.UNet_featuremap_min_edge_length)
 
             num_stages = len(pool_op_kernel_sizes)
             architecture_kwargs['arch_kwargs'].update({
                 'n_stages': num_stages,
                 'kernel_sizes': conv_kernel_sizes,
                 'strides': pool_op_kernel_sizes,
-                'features_per_stage': _features_per_stage(num_stages, max_num_features),
+                'features_per_stage': compute_features_per_stage(num_stages, max_num_features, self.UNet_base_num_features),
                 'n_blocks_per_stage': self.UNet_blocks_per_stage_encoder[:num_stages],
                 'n_conv_per_stage_decoder': self.UNet_blocks_per_stage_decoder[:num_stages - 1],
             })
@@ -183,14 +149,20 @@ class ResEncUNetPlanner(ExperimentPlanner):
 
         # alright now let's determine the batch size. This will give self.UNet_min_batch_size if the while loop was
         # executed. If not, additional vram headroom is used to increase batch size
+        from nnunetv2.experiment_planning.planners.base.vram_estimation import compute_batch_size
         ref_bs = self.UNet_reference_val_corresp_bs_2d if len(spacing) == 2 else self.UNet_reference_val_corresp_bs_3d
-        batch_size = round((reference / estimate) * ref_bs)
-
-        # we need to cap the batch size to cover at most 5% of the entire dataset. Overfitting precaution. We cannot
-        # go smaller than self.UNet_min_batch_size though
-        bs_corresponding_to_5_percent = round(
-            approximate_n_voxels_dataset * self.max_dataset_covered / np.prod(patch_size, dtype=np.float64))
-        batch_size = max(min(batch_size, bs_corresponding_to_5_percent), self.UNet_min_batch_size)
+        reference_val = self.UNet_reference_val_2d if len(spacing) == 2 else self.UNet_reference_val_3d
+        batch_size = compute_batch_size(
+            estimate,
+            reference_val,
+            ref_bs,
+            self.UNet_vram_target_GB,
+            self.UNet_reference_val_corresp_GB,
+            self.UNet_min_batch_size,
+            patch_size,
+            approximate_n_voxels_dataset,
+            self.max_dataset_covered
+        )
 
         resampling_data, resampling_data_kwargs, resampling_seg, resampling_seg_kwargs = self.determine_resampling()
         resampling_softmax, resampling_softmax_kwargs = self.determine_segmentation_softmax_export_fn()
@@ -198,23 +170,23 @@ class ResEncUNetPlanner(ExperimentPlanner):
         normalization_schemes, mask_is_used_for_norm = \
             self.determine_normalization_scheme_and_whether_mask_is_used_for_norm()
 
-        plan = {
-            'data_identifier': data_identifier,
-            'preprocessor_name': self.preprocessor_name,
-            'batch_size': batch_size,
-            'patch_size': patch_size,
-            'median_image_size_in_voxels': median_shape,
-            'spacing': spacing,
-            'normalization_schemes': normalization_schemes,
-            'use_mask_for_norm': mask_is_used_for_norm,
-            'resampling_fn_data': resampling_data.__name__,
-            'resampling_fn_seg': resampling_seg.__name__,
-            'resampling_fn_data_kwargs': resampling_data_kwargs,
-            'resampling_fn_seg_kwargs': resampling_seg_kwargs,
-            'resampling_fn_probabilities': resampling_softmax.__name__,
-            'resampling_fn_probabilities_kwargs': resampling_softmax_kwargs,
-            'architecture': architecture_kwargs
-        }
+        plan = build_plan_dict(
+            data_identifier,
+            self.preprocessor_name,
+            batch_size,
+            patch_size,
+            median_shape,
+            spacing,
+            normalization_schemes,
+            mask_is_used_for_norm,
+            resampling_data,
+            resampling_seg,
+            resampling_data_kwargs,
+            resampling_seg_kwargs,
+            resampling_softmax,
+            resampling_softmax_kwargs,
+            architecture_kwargs
+        )
         return plan
 
 

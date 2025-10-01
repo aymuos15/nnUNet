@@ -7,3 +7,5 @@ from .resampling_config import (
 )
 from .vram_estimation import static_estimate_VRAM_usage, compute_batch_size
 from .architecture_config import build_architecture_kwargs, compute_features_per_stage
+from .patch_size_planning import compute_initial_patch_size, reduce_patch_size_step
+from .plan_builder import build_plan_dict
