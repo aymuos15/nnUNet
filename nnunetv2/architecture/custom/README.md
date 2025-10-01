@@ -17,8 +17,12 @@ A dynamic implementation of KiU-Net that combines two complementary pathways:
 - 2D and 3D support via parameterized convolution operations
 - Deep supervision compatible
 - Automatic integration with nnU-Net's planning system
-- Memory efficient through dynamic configuration
 - Faithful to original KiU-Net paper with configurable options
+
+**Memory Requirements:**
+- **Dual-branch architecture uses ~2x memory** compared to standard U-Net
+- 24GB GPU: Use 50% features [16,32,64,128] (see `kiunet_minimal` config)
+- 32GB+ GPU: Can use full features [32,64,128,256] (see `kiunet_large` config)
 
 **Reference:** Based on [KiU-Net: Towards Accurate Segmentation of Biomedical Images using Over-complete Representations](https://github.com/jeya-maria-jose/KiU-Net-pytorch)
 

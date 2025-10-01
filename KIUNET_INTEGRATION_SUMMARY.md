@@ -17,10 +17,10 @@ Features implemented:
 **File:** `nnunetv2/training/configs/kiunet.py`
 
 Four configs registered:
-- **`kiunet`**: MaxPool downsampling, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (matches original paper)
-- **`kiunet_conv`**: Strided convolutions, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (faster alternative)
-- **`kiunet_minimal`**: batch_size=1, 3x3x3 kernels, 50% features [16,32,64,128], strided conv, 2 epochs (for 24GB GPUs, testing)
-- **`kiunet_large`**: batch_size=1, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs, production)
+- **`kiunet`**: MaxPool downsampling, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (matches original paper, requires >32GB GPU)
+- **`kiunet_conv`**: Strided convolutions, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (faster alternative, requires >32GB GPU)
+- **`kiunet_minimal`**: batch_size=1, 3x3x3 kernels, 50% features [16,32,64,128], strided conv, 1000 epochs (RECOMMENDED for 24GB GPUs)
+- **`kiunet_large`**: batch_size=1, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (requires >32GB GPU due to dual-branch arch)
 
 ### 3. Trainer Integration
 **File:** `nnunetv2/training/trainer/main.py`
@@ -85,20 +85,19 @@ Note: Models are saved under the base trainer name (`nnUNetTrainer`) regardless 
 
 ### Training
 ```bash
-# For 24GB GPUs (RECOMMENDED for production)
-# Full features, 3x3x3 kernels, batch_size=1, 1000 epochs
+# For 24GB GPUs (RECOMMENDED)
+# 3x3x3 kernels, 50% features [16,32,64,128], batch_size=1, 1000 epochs
+# Dual-branch architecture requires feature reduction to fit in 24GB
+export nnUNet_compile="false"  # Disable torch.compile to save memory
+nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
+
+# For >32GB GPUs (full features)
+# With strided conv (faster)
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet_large
 
-# With MaxPool (matches original paper) - requires >8GB GPU
+# For >32GB GPUs (matches original paper)
+# With MaxPool downsampling
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet
-
-# With strided conv (faster) - requires >8GB GPU
-nnUNetv2_train 004 3d_fullres 0 -tr kiunet_conv
-
-# For testing/development on 24GB GPU (faster with 50% features)
-# Uses 3x3x3 kernels + 50% feature reduction [16,32,64,128]
-export nnUNet_compile="false"  # Disable torch.compile
-nnUNetv2_train 004 3d_fullres 0 -tr kiunet_minimal
 ```
 
 ### Inference
@@ -203,17 +202,19 @@ Models are saved under `nnUNetTrainer__nnUNetPlans__3d_fullres` (base trainer na
 The config used during training is automatically detected from the checkpoint.
 
 ### CUDA Out of Memory
-For 24GB GPUs (recommended):
-- Use `kiunet_large` for production (batch_size=1, full features, 1000 epochs)
-- Use `kiunet_minimal` for testing (batch_size=1, 50% features, 2 epochs)
-- Disable torch.compile if needed: `export nnUNet_compile="false"`
+**Important**: DynamicKiUNet uses a dual-branch architecture (U-Net + Ki-Net), which roughly doubles memory requirements compared to standard U-Net.
 
-For GPUs 8-16GB:
-- Use `kiunet_conv` instead of `kiunet` (strided conv, 3x3x3 kernels)
-- Reduce batch size to 1
+For 24GB GPUs:
+- Use `kiunet_minimal` (batch_size=1, 50% features [16,32,64,128], 1000 epochs) - **RECOMMENDED**
+- Disable torch.compile: `export nnUNet_compile="false"`
+- Full features [32,64,128,256] do not fit on 24GB GPUs with this architecture
 
-For GPUs < 8GB:
-- DynamicKiUNet's dual-branch architecture is memory-intensive
+For >32GB GPUs:
+- Use `kiunet_large` (full features, strided conv) or `kiunet` (full features, MaxPool)
+- Can enable torch.compile for better performance
+
+For GPUs < 24GB:
+- DynamicKiUNet's dual-branch architecture is too memory-intensive
 - Consider using standard nnU-Net instead
 
 ### Config Not Found

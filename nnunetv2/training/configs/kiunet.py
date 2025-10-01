@@ -125,11 +125,11 @@ KIUNET_CONV_CONFIG = TrainerConfig(
     network_builder=build_kiunet_conv,
 )
 
-# Minimal config for 24GB GPUs (reduced features)
+# Optimal config for 24GB GPUs (reduced features to fit dual-branch architecture)
 KIUNET_MINIMAL_CONFIG = TrainerConfig(
     name="kiunet_minimal",
-    description="DynamicKiUNet for 24GB GPU (batch_size=1, 3x3x3 kernels, 50% features, strided conv, 2 epochs)",
-    num_epochs=2,
+    description="DynamicKiUNet for 24GB GPU (batch_size=1, 3x3x3 kernels, 50% features, strided conv, 1000 epochs)",
+    num_epochs=1000,
     batch_size=1,
     network_builder=build_kiunet_minimal,  # Reduced feature channels only
 )
