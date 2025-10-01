@@ -22,7 +22,7 @@ rm -rf "${nnUNet_results}/Dataset004_Hippocampus/nnUNetTrainer__nnUNetPlans__3d_
 
 echo ""
 echo "=========================================="
-echo "Step 3: Train DynamicKiUNet (1000 epochs, 50% features, batch_size=1)"
+echo "Step 3: Train DynamicKiUNet (1 epoch, 50% features, batch_size=1)"
 echo "=========================================="
 # Use kiunet_minimal config - dual-branch arch needs reduced features for 24GB GPU
 # Disable torch.compile to save memory
