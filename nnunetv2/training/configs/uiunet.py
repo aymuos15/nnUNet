@@ -87,11 +87,11 @@ UIUNET_CONFIG = TrainerConfig(
     network_builder=build_uiunet,
 )
 
-# UIU-Net minimal config for 24GB GPUs (1 epoch for testing)
+# UIU-Net minimal config for 24GB GPUs (5 epochs)
 UIUNET_MINIMAL_CONFIG = TrainerConfig(
     name="uiunet_minimal",
-    description="DynamicUIUNet3D for 24GB GPU (batch_size=1, reduced RSU heights, 50% features, 1 epoch)",
-    num_epochs=1,
+    description="DynamicUIUNet3D for 24GB GPU (batch_size=1, reduced RSU heights, 50% features, 5 epochs)",
+    num_epochs=5,
     batch_size=1,
     network_builder=build_uiunet_minimal,
 )
