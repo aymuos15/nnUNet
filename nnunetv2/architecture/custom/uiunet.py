@@ -450,7 +450,8 @@ class DynamicUIUNet3D(nn.Module):
             side_outputs.append(side_out_upsampled)
 
             # Collect for deep supervision (keep at native resolution)
-            if self.deep_supervision:
+            # Skip the last decoder stage (full resolution) - it's only for the fused main output
+            if self.deep_supervision and i < len(self.decoder_stages) - 1:
                 deep_supervision_outputs.append(side_out)
 
         # === FUSION ===
