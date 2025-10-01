@@ -137,7 +137,17 @@ KIUNET_MINIMAL_CONFIG = TrainerConfig(
     network_builder=build_kiunet_minimal,  # Reduced kernel sizes and feature channels
 )
 
+# Optimized config for 24GB GPUs (production use)
+KIUNET_LARGE_CONFIG = TrainerConfig(
+    name="kiunet_large",
+    description="DynamicKiUNet optimized for 24GB GPU (batch_size=2, 3x3x3 kernels, full features, strided conv)",
+    num_epochs=1000,
+    batch_size=2,
+    network_builder=build_kiunet_conv,  # Use strided conv for efficiency
+)
+
 # Register all configs
 register_config(KIUNET_CONFIG)
 register_config(KIUNET_CONV_CONFIG)
 register_config(KIUNET_MINIMAL_CONFIG)
+register_config(KIUNET_LARGE_CONFIG)

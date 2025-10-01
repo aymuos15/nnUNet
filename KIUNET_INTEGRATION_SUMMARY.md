@@ -16,10 +16,11 @@ Features implemented:
 ### 2. Config System Integration
 **File:** `nnunetv2/training/configs/kiunet.py`
 
-Three configs registered:
+Four configs registered:
 - **`kiunet`**: MaxPool downsampling, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (matches original paper)
 - **`kiunet_conv`**: Strided convolutions, 3x3x3 kernels, full features [32,64,128,256], 2 epochs (faster alternative)
-- **`kiunet_minimal`**: batch_size=1, 1x1x1 kernels, 50% features [16,32,64,128], strided conv (for GPUs < 4GB)
+- **`kiunet_minimal`**: batch_size=1, 1x1x1 kernels, 50% features [16,32,64,128], strided conv, 2 epochs (for GPUs < 4GB)
+- **`kiunet_large`**: batch_size=2, 3x3x3 kernels, full features [32,64,128,256], strided conv, 1000 epochs (for 24GB GPUs)
 
 ### 3. Trainer Integration
 **File:** `nnunetv2/training/trainer/main.py`
@@ -84,6 +85,10 @@ Note: Models are saved under the base trainer name (`nnUNetTrainer`) regardless 
 
 ### Training
 ```bash
+# For 24GB GPUs (RECOMMENDED for production)
+# Full features, 3x3x3 kernels, batch_size=2, 1000 epochs
+nnUNetv2_train 004 3d_fullres 0 -tr kiunet_large
+
 # With MaxPool (matches original paper) - requires >8GB GPU
 nnUNetv2_train 004 3d_fullres 0 -tr kiunet
 

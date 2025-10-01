@@ -412,11 +412,13 @@ class DynamicKiUNet(nn.Module):
 
         # Deep supervision heads (optional)
         # These heads are applied to decoder outputs at each stage
-        # Decoder outputs have the same channels as the corresponding encoder stage
+        # We skip the last decoder stage (it's used for the fused final output)
+        # So we only create heads for intermediate decoder stages
         if deep_supervision:
             self.unet_deep_supervision_heads = nn.ModuleList()
-            # Create heads for all decoder stages (in reverse order from bottleneck to output)
-            for dec_idx in range(n_stages - 1):
+            # Create heads for intermediate decoder stages only (skip the last one)
+            # With n_stages=4: decoder has 3 stages (0,1,2), we create heads for 0,1 only
+            for dec_idx in range(n_stages - 2):
                 # Decoder at dec_idx outputs features_per_stage[n_stages - 2 - dec_idx] channels
                 out_channels = features_per_stage[n_stages - 2 - dec_idx]
                 self.unet_deep_supervision_heads.append(
@@ -490,8 +492,8 @@ class DynamicKiUNet(nn.Module):
             unet_dec = self.unet_decoder[dec_idx](unet_dec)
 
             # Deep supervision
-            # Skip the last decoder stage (it will be used for the fused final output)
-            if self.deep_supervision and dec_idx < len(self.unet_decoder) - 1:
+            # Only collect from intermediate decoder stages (we created heads for these)
+            if self.deep_supervision and dec_idx < len(self.unet_deep_supervision_heads):
                 ds_out = self.unet_deep_supervision_heads[dec_idx](unet_dec)
                 deep_supervision_outputs.append(ds_out)
 
