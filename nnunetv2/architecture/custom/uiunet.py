@@ -549,6 +549,10 @@ class DynamicUIUNet3D(nn.Module):
         bottleneck_side_upsampled = _upsample_like(bottleneck_side, input_size)
         side_outputs.append(bottleneck_side_upsampled)
 
+        # Collect bottleneck for deep supervision (lowest resolution)
+        if self.deep_supervision:
+            deep_supervision_outputs.append(bottleneck_side)
+
         # === DECODER ===
         x_dec = encoder_features[-1]
         for i, decoder_stage in enumerate(self.decoder_stages):
