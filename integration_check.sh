@@ -172,12 +172,18 @@ if [ "$RUN_KIUNET" = true ]; then
     echo -e "${GREEN}=========================================="
     echo "Step 4: Predict with KiU-Net"
     echo -e "==========================================${NC}"
-    nnUNetv2_predict -i "${nnUNet_raw}/Dataset$(printf '%03d' $DATASET)_*/imagesTs" \
-                     -o "${nnUNet_results}/kiunet_predictions" \
-                     -d $DATASET \
-                     -c 3d_fullres \
-                     -f 0 \
-                     -npp 5
+    # Find the actual dataset directory name
+    DATASET_DIR=$(ls -d "${nnUNet_raw}"/Dataset$(printf '%03d' $DATASET)_* 2>/dev/null | head -1)
+    if [ -n "$DATASET_DIR" ] && [ -d "$DATASET_DIR/imagesTs" ]; then
+        nnUNetv2_predict -i "$DATASET_DIR/imagesTs" \
+                         -o "${nnUNet_results}/kiunet_predictions" \
+                         -d $DATASET \
+                         -c 3d_fullres \
+                         -f 0 \
+                         -npp 5
+    else
+        echo -e "${YELLOW}Warning: Test images directory not found, skipping prediction${NC}"
+    fi
     echo ""
 fi
 
@@ -200,12 +206,18 @@ if [ "$RUN_UIUNET" = true ]; then
     echo -e "${GREEN}=========================================="
     echo "Step 6: Predict with UIU-Net"
     echo -e "==========================================${NC}"
-    nnUNetv2_predict -i "${nnUNet_raw}/Dataset$(printf '%03d' $DATASET)_*/imagesTs" \
-                     -o "${nnUNet_results}/uiunet_predictions" \
-                     -d $DATASET \
-                     -c 3d_fullres \
-                     -f 0 \
-                     -npp 5
+    # Find the actual dataset directory name
+    DATASET_DIR=$(ls -d "${nnUNet_raw}"/Dataset$(printf '%03d' $DATASET)_* 2>/dev/null | head -1)
+    if [ -n "$DATASET_DIR" ] && [ -d "$DATASET_DIR/imagesTs" ]; then
+        nnUNetv2_predict -i "$DATASET_DIR/imagesTs" \
+                         -o "${nnUNet_results}/uiunet_predictions" \
+                         -d $DATASET \
+                         -c 3d_fullres \
+                         -f 0 \
+                         -npp 5
+    else
+        echo -e "${YELLOW}Warning: Test images directory not found, skipping prediction${NC}"
+    fi
     echo ""
 fi
 
