@@ -434,11 +434,11 @@ class DynamicUIUNet3D(nn.Module):
         # === DECODER ===
         x_dec = encoder_features[-1]
         for i, decoder_stage in enumerate(self.decoder_stages):
-            # Upsample from lower stage
-            x_dec = _upsample_like(x_dec, sizes[self.n_stages - 2 - i])
-
-            # Concatenate with encoder skip connection
+            # Concatenate with encoder skip connection at same resolution
             skip_idx = self.n_stages - 2 - i
+
+            # Upsample x_dec to match encoder feature's actual spatial size
+            x_dec = _upsample_like(x_dec, encoder_features[skip_idx])
             x_dec = torch.cat([x_dec, encoder_features[skip_idx]], dim=1)
 
             # Process through decoder RSU
