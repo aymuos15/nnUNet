@@ -9,10 +9,9 @@ from batchgenerators.utilities.file_and_folder_operations import join, maybe_mkd
 # Import our modular components
 from .checkpointing import save_checkpoint, load_checkpoint
 from .lifecycle import (setup_output_folders, setup_cascaded_folders, _set_batch_size_and_oversample,
-                        run_training)
+                        run_training, configure_optimizers)
 from nnunetv2.architecture import set_deep_supervision_enabled, _do_i_compile
-from .training import configure_optimizers, train_step
-from .validation import perform_actual_validation, validation_step
+from .validation import perform_actual_validation
 from nnunetv2.data.dataset import do_split, get_tr_and_val_datasets
 from nnunetv2.data.loader import get_dataloaders
 from nnunetv2.training.configs import TrainerConfig
