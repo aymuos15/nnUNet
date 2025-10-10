@@ -17,13 +17,13 @@ From config.py:
     - set_deep_supervision_enabled: Enable/disable deep supervision
     - plot_network_architecture: Visualize network architecture
 
-From factory/:
+From networks/:
     - build_unet: Default UNet architecture builder
     - build_kiunet_maxpool: KiU-Net with MaxPool downsampling
     - build_kiunet_conv: KiU-Net with strided convolutions
     - build_kiunet_minimal: KiU-Net with reduced memory footprint
-
-From custom/:
+    - build_uiunet: UIU-Net with full RSU heights
+    - build_uiunet_minimal: UIU-Net with reduced memory footprint
     - DynamicKiUNet: Dynamic KiU-Net architecture with dual-branch encoder-decoder
     - CRFB: Cross-Refinement Block for feature exchange between branches
     - DynamicUIUNet3D: Dynamic UIU-Net architecture with nested RSU blocks
@@ -54,8 +54,18 @@ For network configuration:
 from .builder import build_network_architecture
 from .instantiation import get_network_from_plans
 from .config import _do_i_compile, set_deep_supervision_enabled, plot_network_architecture
-from .factory import build_unet, build_kiunet_maxpool, build_kiunet_conv, build_kiunet_minimal
-from .custom import DynamicKiUNet, CRFB, DynamicUIUNet3D, DynamicRSU3D
+from .networks import (
+    build_unet,
+    build_kiunet_maxpool,
+    build_kiunet_conv,
+    build_kiunet_minimal,
+    build_uiunet,
+    build_uiunet_minimal,
+    DynamicKiUNet,
+    CRFB,
+    DynamicUIUNet3D,
+    DynamicRSU3D
+)
 
 __all__ = [
     'build_network_architecture',
@@ -67,6 +77,8 @@ __all__ = [
     'build_kiunet_maxpool',
     'build_kiunet_conv',
     'build_kiunet_minimal',
+    'build_uiunet',
+    'build_uiunet_minimal',
     'DynamicKiUNet',
     'CRFB',
     'DynamicUIUNet3D',

@@ -12,7 +12,7 @@ in TrainerConfig.
 from typing import Union, List, Tuple
 from torch import nn
 
-from nnunetv2.architecture.factory import build_unet
+from nnunetv2.architecture.networks import build_unet
 
 
 def build_network_architecture(architecture_class_name: str,
@@ -67,7 +67,7 @@ def build_network_architecture(architecture_class_name: str,
         ... )
 
         >>> # Custom architecture via TrainerConfig
-        >>> from nnunetv2.architecture.factory import build_kiunet_conv
+        >>> from nnunetv2.architecture.networks import build_kiunet_conv
         >>> from nnunetv2.training.configs import TrainerConfig
         >>> config = TrainerConfig(
         ...     name="my_kiunet",

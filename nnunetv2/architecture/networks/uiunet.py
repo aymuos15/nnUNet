@@ -706,3 +706,119 @@ class DynamicUIUNet3D(nn.Module):
             return [fused_output] + deep_supervision_outputs[::-1]
         else:
             return fused_output
+
+
+# ============================================================================
+# Builder Functions
+# ============================================================================
+
+import pydoc
+
+
+def build_uiunet(
+    architecture_class_name: str,
+    arch_init_kwargs: dict,
+    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+    num_input_channels: int,
+    num_output_channels: int,
+    enable_deep_supervision: bool = True
+) -> nn.Module:
+    """
+    Build DynamicUIUNet3D with full RSU heights.
+
+    This builder uses full RSU heights (7,6,5,4,4,4) which provides the best
+    feature extraction but requires significant GPU memory (>32GB recommended).
+
+    Args:
+        architecture_class_name: Ignored (we always use DynamicUIUNet3D)
+        arch_init_kwargs: Architecture kwargs from plans
+        arch_init_kwargs_req_import: Keys that need module import
+        num_input_channels: Number of input channels (modalities)
+        num_output_channels: Number of output classes
+        enable_deep_supervision: Whether to use deep supervision
+
+    Returns:
+        DynamicUIUNet3D with full RSU heights
+
+    Example:
+        >>> from nnunetv2.training.configs import TrainerConfig
+        >>> config = TrainerConfig(
+        ...     name="uiunet",
+        ...     network_builder=build_uiunet
+        ... )
+    """
+    # Import required modules for arch_init_kwargs
+    architecture_kwargs = dict(**arch_init_kwargs)
+    for key in arch_init_kwargs_req_import:
+        if architecture_kwargs[key] is not None:
+            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
+
+    # Build DynamicUIUNet3D with full RSU heights
+    network = DynamicUIUNet3D(
+        input_channels=num_input_channels,
+        num_classes=num_output_channels,
+        deep_supervision=enable_deep_supervision,
+        minimal=False,  # Full RSU heights
+        **architecture_kwargs
+    )
+
+    return network
+
+
+def build_uiunet_minimal(
+    architecture_class_name: str,
+    arch_init_kwargs: dict,
+    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
+    num_input_channels: int,
+    num_output_channels: int,
+    enable_deep_supervision: bool = True
+) -> nn.Module:
+    """
+    Build DynamicUIUNet3D with minimal memory footprint.
+
+    This builder uses reduced RSU heights (5,4,3,3,3,3) and 50% features
+    to fit the nested U-Net structure on GPUs with limited memory (24GB).
+
+    UIU-Net's nested structure is VERY memory-intensive. For 24GB GPUs,
+    this minimal configuration is REQUIRED.
+
+    Args:
+        architecture_class_name: Ignored (we always use DynamicUIUNet3D)
+        arch_init_kwargs: Architecture kwargs from plans
+        arch_init_kwargs_req_import: Keys that need module import
+        num_input_channels: Number of input channels (modalities)
+        num_output_channels: Number of output classes
+        enable_deep_supervision: Whether to use deep supervision
+
+    Returns:
+        DynamicUIUNet3D with minimal RSU heights and 50% features
+
+    Example:
+        >>> from nnunetv2.training.configs import TrainerConfig
+        >>> config = TrainerConfig(
+        ...     name="uiunet_minimal",
+        ...     batch_size=1,  # REQUIRED for large volumes
+        ...     network_builder=build_uiunet_minimal
+        ... )
+    """
+    # Import required modules for arch_init_kwargs
+    architecture_kwargs = dict(**arch_init_kwargs)
+    for key in arch_init_kwargs_req_import:
+        if architecture_kwargs[key] is not None:
+            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
+
+    # Reduce feature channels by 50% (nested U-Net uses significant memory)
+    architecture_kwargs['features_per_stage'] = [
+        f // 2 for f in architecture_kwargs['features_per_stage']
+    ]
+
+    # Build DynamicUIUNet3D with minimal RSU heights
+    network = DynamicUIUNet3D(
+        input_channels=num_input_channels,
+        num_classes=num_output_channels,
+        deep_supervision=enable_deep_supervision,
+        minimal=True,  # Reduced RSU heights (5,4,3,3,3,3)
+        **architecture_kwargs
+    )
+
+    return network

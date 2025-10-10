@@ -2,81 +2,19 @@
 UIU-Net architecture configs for nnU-Net.
 
 Provides configs that use the DynamicUIUNet3D architecture with nested RSU blocks.
+The actual builder functions are located in nnunetv2.architecture.networks.uiunet.
+
+Available Configs:
+-----------------
+- UIUNET_CONFIG: Full RSU heights (1 epoch for testing)
+- UIUNET_MINIMAL_CONFIG: Reduced RSU heights and 50% features for 24GB GPUs (5 epochs)
 """
 
-from typing import Union, List, Tuple
-import torch.nn as nn
 from nnunetv2.training.configs.base import TrainerConfig, register_config
-from nnunetv2.architecture.custom.uiunet import DynamicUIUNet3D
-
-
-def build_uiunet(
-    architecture_class_name: str,
-    arch_init_kwargs: dict,
-    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
-    num_input_channels: int,
-    num_output_channels: int,
-    enable_deep_supervision: bool = True
-) -> nn.Module:
-    """
-    Network builder for DynamicUIUNet3D.
-
-    Uses standard RSU heights for full architecture fidelity.
-    """
-    import pydoc
-    architecture_kwargs = dict(**arch_init_kwargs)
-    for key in arch_init_kwargs_req_import:
-        if architecture_kwargs[key] is not None:
-            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
-
-    # Build DynamicUIUNet3D
-    network = DynamicUIUNet3D(
-        input_channels=num_input_channels,
-        num_classes=num_output_channels,
-        deep_supervision=enable_deep_supervision,
-        rsu_heights=None,  # Auto-calculate: starts at 7, decreases per stage
-        minimal=False,
-        **architecture_kwargs
-    )
-
-    return network
-
-
-def build_uiunet_minimal(
-    architecture_class_name: str,
-    arch_init_kwargs: dict,
-    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
-    num_input_channels: int,
-    num_output_channels: int,
-    enable_deep_supervision: bool = True
-) -> nn.Module:
-    """
-    Network builder for DynamicUIUNet3D with reduced memory footprint.
-
-    Uses:
-    - Reduced RSU heights (starts at 5 instead of 7)
-    - 50% feature channels (dual-nested structure is very memory intensive)
-    """
-    import pydoc
-    architecture_kwargs = dict(**arch_init_kwargs)
-    for key in arch_init_kwargs_req_import:
-        if architecture_kwargs[key] is not None:
-            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
-
-    # Reduce feature channels by 50% (nested U-Nets use significant memory)
-    architecture_kwargs['features_per_stage'] = [f // 2 for f in architecture_kwargs['features_per_stage']]
-
-    # Build DynamicUIUNet3D with minimal settings
-    network = DynamicUIUNet3D(
-        input_channels=num_input_channels,
-        num_classes=num_output_channels,
-        deep_supervision=enable_deep_supervision,
-        rsu_heights=None,  # Auto-calculate with minimal=True: starts at 5
-        minimal=True,  # Use reduced RSU heights
-        **architecture_kwargs
-    )
-
-    return network
+from nnunetv2.architecture.networks import (
+    build_uiunet,
+    build_uiunet_minimal
+)
 
 
 # UIU-Net config (1 epoch for testing)

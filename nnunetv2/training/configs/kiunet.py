@@ -3,7 +3,7 @@ KiU-Net architecture configs for nnU-Net.
 
 Provides pre-configured TrainerConfig instances that use the DynamicKiUNet
 architecture instead of the default U-Net. The actual builder functions are
-located in nnunetv2.architecture.factory.kiunet_builder.
+located in nnunetv2.architecture.networks.kiunet.
 
 Available Configs:
 -----------------
@@ -14,7 +14,7 @@ Available Configs:
 """
 
 from nnunetv2.training.configs.base import TrainerConfig, register_config
-from nnunetv2.architecture.factory import (
+from nnunetv2.architecture.networks import (
     build_kiunet_maxpool,
     build_kiunet_conv,
     build_kiunet_minimal
