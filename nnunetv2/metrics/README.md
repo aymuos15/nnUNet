@@ -10,8 +10,8 @@ Metrics quantify segmentation performance by comparing predictions against groun
 
 ```
 metrics/
-├── implementations/  # Metric implementations
-└── __init__.py
+├── dice.py      # Dice metric implementations
+└── __init__.py  # Public API exports
 ```
 
 ## Available Metrics
@@ -79,13 +79,17 @@ See [Evaluation Module](../evaluation/) for details.
 ## Programmatic API
 
 ```python
-from nnunetv2.metrics.implementations import compute_dice, compute_hausdorff_distance
+from nnunetv2.metrics import get_tp_fp_fn_tn
+import torch
 
-# Compute Dice
-dice_score = compute_dice(prediction, ground_truth)
+# Compute TP, FP, FN, TN for Dice calculation
+net_output = torch.softmax(model_output, dim=1)  # Your model output
+ground_truth = labels  # Your ground truth labels
 
-# Compute Hausdorff Distance  
-hd95 = compute_hausdorff_distance(prediction, ground_truth, percentile=95)
+tp, fp, fn, tn = get_tp_fp_fn_tn(net_output, ground_truth)
+
+# Calculate Dice from TP, FP, FN
+dice = (2 * tp) / (2 * tp + fp + fn)
 ```
 
 ## Custom Metrics

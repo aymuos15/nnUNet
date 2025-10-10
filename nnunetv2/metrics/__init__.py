@@ -10,7 +10,7 @@ The module is organized similar to the losses module:
 - implementations: Actual metric computation implementations
 """
 
-from .implementations import get_tp_fp_fn_tn
+from .dice import get_tp_fp_fn_tn
 
 __all__ = [
     'get_tp_fp_fn_tn',

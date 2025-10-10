@@ -2,7 +2,7 @@ from typing import Callable
 
 import torch
 from nnunetv2.training.runtime_utils.ddp_allgather import AllGatherGrad
-from nnunetv2.metrics.implementations.dice import get_tp_fp_fn_tn
+from nnunetv2.metrics.dice import get_tp_fp_fn_tn
 from torch import nn
 
 

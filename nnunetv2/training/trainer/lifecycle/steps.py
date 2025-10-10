@@ -11,7 +11,7 @@ import torch
 from torch import autocast
 
 from nnunetv2.utilities.core.helpers import dummy_context
-from nnunetv2.metrics.implementations.dice import get_tp_fp_fn_tn
+from nnunetv2.metrics.dice import get_tp_fp_fn_tn
 
 
 def train_step(trainer_instance, batch: dict) -> dict:
