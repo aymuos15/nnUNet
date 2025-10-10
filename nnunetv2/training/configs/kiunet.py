@@ -1,112 +1,24 @@
 """
 KiU-Net architecture configs for nnU-Net.
 
-Provides configs that use the DynamicKiUNet architecture instead of the default U-Net.
+Provides pre-configured TrainerConfig instances that use the DynamicKiUNet
+architecture instead of the default U-Net. The actual builder functions are
+located in nnunetv2.architecture.factory.kiunet_builder.
+
+Available Configs:
+-----------------
+- KIUNET_CONFIG: MaxPool downsampling (2 epochs for testing)
+- KIUNET_CONV_CONFIG: Strided convolutions (2 epochs for testing)
+- KIUNET_MINIMAL_CONFIG: Reduced memory footprint (1 epoch for testing)
+- KIUNET_LARGE_CONFIG: Full features, production use (1000 epochs)
 """
 
-from typing import Union, List, Tuple
-import torch.nn as nn
 from nnunetv2.training.configs.base import TrainerConfig, register_config
-from nnunetv2.architecture import DynamicKiUNet
-
-
-def build_kiunet_maxpool(
-    architecture_class_name: str,
-    arch_init_kwargs: dict,
-    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
-    num_input_channels: int,
-    num_output_channels: int,
-    enable_deep_supervision: bool = True
-) -> nn.Module:
-    """
-    Network builder for DynamicKiUNet with MaxPool downsampling.
-
-    Uses MaxPool to match the original KiU-Net paper.
-    """
-    # Import required modules for arch_init_kwargs
-    import pydoc
-    architecture_kwargs = dict(**arch_init_kwargs)
-    for key in arch_init_kwargs_req_import:
-        if architecture_kwargs[key] is not None:
-            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
-
-    # Build DynamicKiUNet with MaxPool (matches original paper)
-    network = DynamicKiUNet(
-        input_channels=num_input_channels,
-        num_classes=num_output_channels,
-        deep_supervision=enable_deep_supervision,
-        pool_type='max',  # Original KiU-Net uses MaxPool
-        **architecture_kwargs
-    )
-
-    return network
-
-
-def build_kiunet_conv(
-    architecture_class_name: str,
-    arch_init_kwargs: dict,
-    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
-    num_input_channels: int,
-    num_output_channels: int,
-    enable_deep_supervision: bool = True
-) -> nn.Module:
-    """
-    Network builder for DynamicKiUNet with strided convolutions.
-
-    Uses strided convolutions for faster training (modern approach).
-    """
-    import pydoc
-    architecture_kwargs = dict(**arch_init_kwargs)
-    for key in arch_init_kwargs_req_import:
-        if architecture_kwargs[key] is not None:
-            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
-
-    # Build DynamicKiUNet with strided convolutions
-    network = DynamicKiUNet(
-        input_channels=num_input_channels,
-        num_classes=num_output_channels,
-        deep_supervision=enable_deep_supervision,
-        pool_type='conv',  # Strided convolutions (faster)
-        **architecture_kwargs
-    )
-
-    return network
-
-
-def build_kiunet_minimal(
-    architecture_class_name: str,
-    arch_init_kwargs: dict,
-    arch_init_kwargs_req_import: Union[List[str], Tuple[str, ...]],
-    num_input_channels: int,
-    num_output_channels: int,
-    enable_deep_supervision: bool = True
-) -> nn.Module:
-    """
-    Network builder for DynamicKiUNet with reduced memory footprint.
-
-    Uses 3x3x3 kernels (same as default), reduced feature channels, and strided convolutions.
-    """
-    import pydoc
-    architecture_kwargs = dict(**arch_init_kwargs)
-    for key in arch_init_kwargs_req_import:
-        if architecture_kwargs[key] is not None:
-            architecture_kwargs[key] = pydoc.locate(architecture_kwargs[key])
-
-    # Keep kernel sizes at 3x3x3 (no reduction needed for 24GB GPU)
-    # Reduce feature channels by 50% (dual-branch uses ~2x memory)
-    # Default is [32, 64, 128, 256], reduce to [16, 32, 64, 128]
-    architecture_kwargs['features_per_stage'] = [f // 2 for f in architecture_kwargs['features_per_stage']]
-
-    # Build DynamicKiUNet with reduced features but normal kernel sizes
-    network = DynamicKiUNet(
-        input_channels=num_input_channels,
-        num_classes=num_output_channels,
-        deep_supervision=enable_deep_supervision,
-        pool_type='conv',  # Strided convolutions
-        **architecture_kwargs
-    )
-
-    return network
+from nnunetv2.architecture.factory import (
+    build_kiunet_maxpool,
+    build_kiunet_conv,
+    build_kiunet_minimal
+)
 
 
 # KiU-Net config with MaxPool (2 epochs for testing)

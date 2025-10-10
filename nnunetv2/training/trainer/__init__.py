@@ -1,4 +1,3 @@
-from .main import nnUNetTrainer
-from .kiunet_trainer import nnUNetTrainerKiUNet, nnUNetTrainerKiUNetConv
+from .train import nnUNetTrainer
 
-__all__ = ['nnUNetTrainer', 'nnUNetTrainerKiUNet', 'nnUNetTrainerKiUNetConv']
+__all__ = ['nnUNetTrainer']
