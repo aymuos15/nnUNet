@@ -7,29 +7,29 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
 from dynamic_network_architectures.architectures.unet import PlainConvUNet
 
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_ANISO_THRESHOLD
-from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
-from nnunetv2.experiment_planning.planners.base.spacing_utils import (
+from nnunetv2.experiment_planning.planners.components.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.components.spacing_utils import (
     determine_fullres_target_spacing,
     determine_transpose
 )
-from nnunetv2.experiment_planning.planners.base.resampling_config import (
+from nnunetv2.experiment_planning.planners.components.resampling_config import (
     determine_normalization_scheme_and_whether_mask_is_used_for_norm,
     determine_resampling,
     determine_segmentation_softmax_export_fn
 )
-from nnunetv2.experiment_planning.planners.base.vram_estimation import (
+from nnunetv2.experiment_planning.planners.components.vram_estimation import (
     static_estimate_VRAM_usage,
     compute_batch_size
 )
-from nnunetv2.experiment_planning.planners.base.architecture_config import (
+from nnunetv2.experiment_planning.planners.components.architecture_config import (
     build_architecture_kwargs,
     compute_features_per_stage
 )
-from nnunetv2.experiment_planning.planners.base.patch_size_planning import (
+from nnunetv2.experiment_planning.planners.components.patch_size_planning import (
     compute_initial_patch_size,
     reduce_patch_size_step
 )
-from nnunetv2.experiment_planning.planners.base.plan_builder import build_plan_dict
+from nnunetv2.experiment_planning.planners.components.plan_builder import build_plan_dict
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
 from nnunetv2.paths import nnUNet_raw, nnUNet_preprocessed
 from nnunetv2.preprocessing.resampling.default_resampling import compute_new_shape

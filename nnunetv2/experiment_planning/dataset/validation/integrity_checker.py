@@ -6,8 +6,8 @@ import numpy as np
 from batchgenerators.utilities.file_and_folder_operations import *
 
 from nnunetv2.imageio.reader_writer_registry import determine_reader_writer_from_dataset_json
-from nnunetv2.experiment_planning.planning.label_handling import LabelManager
-from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
+from nnunetv2.experiment_planning.plans.label_manager import LabelManager
+from nnunetv2.experiment_planning.plans.plans_manager import PlansManager
 from nnunetv2.data.dataset_io.utils import get_filenames_of_train_images_and_targets
 from .label_validators import verify_labels, validate_labels_consecutive
 from .image_validators import check_cases

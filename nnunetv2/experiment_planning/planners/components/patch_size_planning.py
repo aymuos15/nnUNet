@@ -5,7 +5,7 @@ import numpy as np
 from copy import deepcopy
 from typing import Tuple, Union, List
 
-from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.components.network_topology import get_pool_and_conv_props
 
 
 def compute_initial_patch_size(

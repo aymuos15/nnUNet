@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 # see https://adamj.eu/tech/2021/05/13/python-type-hints-how-to-fix-circular-imports/
 if TYPE_CHECKING:
-    from nnunetv2.experiment_planning.planning.plans_handler import PlansManager, ConfigurationManager
+    from nnunetv2.experiment_planning.plans.plans_manager import PlansManager, ConfigurationManager
 
 
 class LabelManager(object):
@@ -250,9 +250,9 @@ def get_labelmanager_class_from_plans(plans: dict) -> Type[LabelManager]:
         print('No label manager specified in plans. Using default: LabelManager')
         return LabelManager
     else:
-        labelmanager_class = recursive_find_python_class(join(nnunetv2.__path__[0], "experiment_planning", "planning"),
+        labelmanager_class = recursive_find_python_class(join(nnunetv2.__path__[0], "experiment_planning", "plans"),
                                                          plans['label_manager'],
-                                                         current_module="nnunetv2.experiment_planning.planning")
+                                                         current_module="nnunetv2.experiment_planning.plans")
         return labelmanager_class
 
 

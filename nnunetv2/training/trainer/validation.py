@@ -23,7 +23,7 @@ from nnunetv2.inference.predictor.prediction.sliding_window_utils import compute
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.data.dataset import infer_dataset_class
 from nnunetv2.data.dataset_io.file_path_utilities import check_workers_alive_and_busy
-from nnunetv2.experiment_planning.planning.label_handling import convert_labelmap_to_one_hot
+from nnunetv2.experiment_planning.plans.label_manager import convert_labelmap_to_one_hot
 
 
 def perform_actual_validation(trainer_instance, save_probabilities: bool = False):

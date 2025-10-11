@@ -7,18 +7,18 @@ from dynamic_network_architectures.architectures.unet import ResidualEncoderUNet
 from nnunetv2.preprocessing.resampling.resample_torch import resample_torch_fornnunet
 from torch import nn
 
-from nnunetv2.experiment_planning.planners.standard.default_planner import ExperimentPlanner
+from nnunetv2.experiment_planning.planners.standard import ExperimentPlanner
 
-from nnunetv2.experiment_planning.planners.base.network_topology import get_pool_and_conv_props
-from nnunetv2.experiment_planning.planners.base.architecture_config import (
+from nnunetv2.experiment_planning.planners.components.network_topology import get_pool_and_conv_props
+from nnunetv2.experiment_planning.planners.components.architecture_config import (
     build_architecture_kwargs,
     compute_features_per_stage
 )
-from nnunetv2.experiment_planning.planners.base.patch_size_planning import (
+from nnunetv2.experiment_planning.planners.components.patch_size_planning import (
     compute_initial_patch_size,
     reduce_patch_size_step
 )
-from nnunetv2.experiment_planning.planners.base.plan_builder import build_plan_dict
+from nnunetv2.experiment_planning.planners.components.plan_builder import build_plan_dict
 
 
 class ResEncUNetPlanner(ExperimentPlanner):
@@ -149,7 +149,7 @@ class ResEncUNetPlanner(ExperimentPlanner):
 
         # alright now let's determine the batch size. This will give self.UNet_min_batch_size if the while loop was
         # executed. If not, additional vram headroom is used to increase batch size
-        from nnunetv2.experiment_planning.planners.base.vram_estimation import compute_batch_size
+        from nnunetv2.experiment_planning.planners.components.vram_estimation import compute_batch_size
         ref_bs = self.UNet_reference_val_corresp_bs_2d if len(spacing) == 2 else self.UNet_reference_val_corresp_bs_3d
         reference_val = self.UNet_reference_val_2d if len(spacing) == 2 else self.UNet_reference_val_3d
         batch_size = compute_batch_size(

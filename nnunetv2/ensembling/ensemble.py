@@ -9,8 +9,8 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
     maybe_mkdir_p, isdir, save_pickle, load_pickle, isfile
 from nnunetv2.experiment_planning.config.defaults import DEFAULT_NUM_PROCESSES
 from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
-from nnunetv2.experiment_planning.planning.label_handling import LabelManager
-from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
+from nnunetv2.experiment_planning.plans.label_manager import LabelManager
+from nnunetv2.experiment_planning.plans.plans_manager import PlansManager
 
 
 def average_probabilities(list_of_files: List[str]) -> np.ndarray:

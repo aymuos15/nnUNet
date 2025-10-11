@@ -10,8 +10,8 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
 
 import nnunetv2
 from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
-from nnunetv2.experiment_planning.planning.label_handling import determine_num_input_channels
-from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
+from nnunetv2.experiment_planning.plans.label_manager import determine_num_input_channels
+from nnunetv2.experiment_planning.plans.plans_manager import PlansManager
 
 
 def initialize_from_trained_model_folder(predictor,

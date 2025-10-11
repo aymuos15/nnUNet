@@ -31,7 +31,7 @@ from nnunetv2.preprocessing.resampling.default_resampling import compute_new_sha
 from nnunetv2.data.dataset import nnUNetDatasetBlosc2
 from nnunetv2.data.dataset_io.dataset_name_id_conversion import maybe_convert_to_dataset_name
 from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
-from nnunetv2.experiment_planning.planning.plans_handler import PlansManager, ConfigurationManager
+from nnunetv2.experiment_planning.plans.plans_manager import PlansManager, ConfigurationManager
 from nnunetv2.data.dataset_io.utils import get_filenames_of_train_images_and_targets
 
 

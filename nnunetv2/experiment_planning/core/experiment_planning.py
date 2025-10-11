@@ -2,7 +2,7 @@ from typing import List, Type, Optional, Tuple, Union
 
 import nnunetv2
 from batchgenerators.utilities.file_and_folder_operations import join
-from nnunetv2.experiment_planning.planners.standard.default_planner import ExperimentPlanner
+from nnunetv2.experiment_planning.planners.standard import ExperimentPlanner
 from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
 
 

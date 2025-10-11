@@ -13,8 +13,8 @@ from threadpoolctl import threadpool_limits
 
 from nnunetv2.paths import nnUNet_preprocessed
 from nnunetv2.data.dataset import nnUNetBaseDataset, nnUNetDatasetBlosc2, infer_dataset_class
-from nnunetv2.experiment_planning.planning.label_handling import LabelManager
-from nnunetv2.experiment_planning.planning.plans_handler import PlansManager
+from nnunetv2.experiment_planning.plans.label_manager import LabelManager
+from nnunetv2.experiment_planning.plans.plans_manager import PlansManager
 from nnunetv2.training.runtime_utils.default_n_proc_DA import get_allowed_n_proc_DA
 from nnunetv2.data.dataset import get_tr_and_val_datasets
 from nnunetv2.data.transform_builders import get_training_transforms, get_validation_transforms

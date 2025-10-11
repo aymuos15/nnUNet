@@ -15,14 +15,14 @@ from batchgenerators.utilities.file_and_folder_operations import load_json, join
 
 from nnunetv2.imageio.reader_writer_registry import recursive_find_reader_writer_by_name
 from nnunetv2.utilities.core.find_class_by_name import recursive_find_python_class
-from nnunetv2.experiment_planning.planning.label_handling import get_labelmanager_class_from_plans
+from nnunetv2.experiment_planning.plans.label_manager import get_labelmanager_class_from_plans
 
 # see https://adamj.eu/tech/2021/05/13/python-type-hints-how-to-fix-circular-imports/
 from typing import TYPE_CHECKING
 from dynamic_network_architectures.building_blocks.helper import convert_dim_to_conv_op, get_matching_instancenorm
 
 if TYPE_CHECKING:
-    from nnunetv2.experiment_planning.planning.label_handling import LabelManager
+    from nnunetv2.experiment_planning.plans.label_manager import LabelManager
     from nnunetv2.imageio.base_reader_writer import BaseReaderWriter
     from nnunetv2.preprocessing.default_preprocessor import DefaultPreprocessor
     from nnunetv2.experiment_planning.experiment_planners.default_experiment_planner import ExperimentPlanner
